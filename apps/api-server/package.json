@@ -12,8 +12,10 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "axios": "^1.18.1",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.80.2",
+    "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "cron-parser": "^5.6.2",
     "dotenv": "^17.4.2",
