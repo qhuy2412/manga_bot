@@ -15,7 +15,6 @@ mangabot/
 │   └── database/                     ← Quản lý Mongoose Connection & Models
 │       ├── src/
 │       │   ├── models/               ← Các Mongoose Schemas dùng chung
-│       │   │   ├── crawl-source.ts
 │       │   │   ├── bot-config.ts
 │       │   │   ├── story.ts
 │       │   │   ├── chapter.ts
@@ -35,7 +34,6 @@ mangabot/
 │   │   │   │   ├── stories/
 │   │   │   │   ├── chapters/
 │   │   │   │   ├── genres/
-│   │   │   │   ├── sources/
 │   │   │   │   ├── bot-configs/
 │   │   │   │   ├── crawl-jobs/       ← POST trigger cào thủ công
 │   │   │   │   └── crawl-logs/       ← GET logs cào truyện
@@ -60,19 +58,8 @@ mangabot/
 │       │   │   └── smart-crawl.ts    ← Handler quét cập nhật và tự sửa lỗi
 │       │   ├── extraction/           ← Tầng bóc tách dữ liệu DOM
 │       │   │   ├── dom-parser.ts     ← Cheerio parsing
-│       │   │   ├── browser.ts        ← Puppeteer browser wrapper
-│       │   │   └── strategies/       ← Chiến lược khám phá chương (Strategy)
-│       │   │       ├── interface.ts
-│       │   │       ├── chapter-list.strategy.ts
-│       │   │       ├── follow-next.strategy.ts
-│       │   │       └── factory.ts        ← DiscoveryFactory chọn chiến lược
-│       │   ├── pipeline/             ← Tầng xử lý luồng dữ liệu & tối ưu hóa
-│       │   │   ├── processors/       ← Xử lý nội dung Comic vs Novel
-│       │   │   │   ├── interface.ts
-│       │   │   │   ├── comic.processor.ts
-│       │   │   │   ├── novel.processor.ts
-│       │   │   │   └── factory.ts    ← ContentProcessorFactory chọn processor
-│       │   │   └── image.ts          ← Sharp xử lý nén ảnh .webp
+│       │   │   └── browser.ts        ← Puppeteer browser wrapper
+│       │   ├── pipeline/             ← Tầng xử lý nén ảnh và upload CDN (Sharp)
 │       │   └── api-client/
 │       │       ├── client.ts         ← Axios wrapper (gắn token nội bộ)
 │       │       └── repositories.ts   ← Chứa hàm gọi REST API sang Server

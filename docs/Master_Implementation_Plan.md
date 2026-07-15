@@ -57,6 +57,10 @@ REDIS_URL=redis://localhost:6379
 JWT_SECRET=your_super_secret_jwt_key
 INTERNAL_TOKEN=your_super_secret_internal_worker_key
 
+# Crawl Source Config
+CRAWL_SOURCE_NAME=DiLib
+CRAWL_SOURCE_DOMAIN=dilib.vn
+
 # External API
 CLOUDINARY_URL=cloudinary://API_KEY:API_SECRET@CLOUD_NAME
 ```
@@ -75,14 +79,13 @@ Tạo thư mục `src/database` và `src/database/models` bên trong `apps/api-s
    * *Đánh Index:* `schema.index({ isAutoUpdate: 1, nextCrawlTime: 1 })`
 3. **File `src/database/models/Chapter.ts`:**
    * *Đánh Unique Index:* `schema.index({ storyId: 1, chapterIndex: 1 }, { unique: true })` (Phục vụ Upsert).
-4. **Viết tiếp các model còn lại:** `BotConfig.ts`, `CrawlSource.ts`, `CrawlLog.ts`, `User.ts`.
+4. **Viết tiếp các model còn lại:** `BotConfig.ts`, `CrawlLog.ts`, `User.ts`.
 5. **File `src/database/index.ts`:**
    ```typescript
    export * from './connect';
    export * from './models/Story';
    export * from './models/Chapter';
    export * from './models/BotConfig';
-   export * from './models/CrawlSource';
    export * from './models/CrawlLog';
    ```
 
@@ -154,6 +157,8 @@ Tạo file `apps/api-server/tsconfig.json`:
      REDIS_URL: z.string().url(),
      JWT_SECRET: z.string().min(8),
      INTERNAL_TOKEN: z.string().min(8),
+     CRAWL_SOURCE_NAME: z.string().default("DiLib"),
+     CRAWL_SOURCE_DOMAIN: z.string().default("dilib.vn"),
    });
    export const config = ConfigSchema.parse(process.env);
    ```
@@ -177,7 +182,7 @@ Tạo file `apps/api-server/tsconfig.json`:
 5. **Tạo `src/middlewares/internal.middleware.ts`**: Verify `req.headers['x-internal-token'] === config.INTERNAL_TOKEN`.
 
 ### Bước 3: Code các API cốt lõi
-1. **Admin API:** Code các route CRUD trong `src/routes/admin.route.ts` cho Truyện, Nguồn và Bot.
+1. **Admin API:** Code các route CRUD trong `src/routes/admin.route.ts` cho Truyện và Bot.
 2. **Cronjob Logic:** Mỗi khi tạo Truyện có `cronSchedule`, dùng thư viện `cron-parser` tính ra mốc Date lưu vào `nextCrawlTime`.
 3. **System Scheduler:** Tạo `src/scheduler/index.ts` chứa vòng lặp `setInterval` (mỗi 1 phút):
    * Query DB: `Story.find({ isAutoUpdate: true, nextCrawlTime: { $lte: new Date() } })`.

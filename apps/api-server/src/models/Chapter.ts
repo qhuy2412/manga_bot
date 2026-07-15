@@ -5,8 +5,7 @@ export interface IChapter extends Document {
   chapterName: string;
   chapterIndex: number;
   language: string;
-  images?: string[];
-  content?: string;
+  images: string[];
   sourceUrl: string;
   createdAt: Date;
   updatedAt: Date;
@@ -17,8 +16,7 @@ const ChapterSchema = new Schema<IChapter>({
   chapterName: { type: String, required: true },
   chapterIndex: { type: Number, required: true },
   language: { type: String, default: 'vi' },
-  images: { type: [String], default: [] },
-  content: { type: String },
+  images: { type: [String], required: true, default: [] },
   sourceUrl: { type: String, required: true }
 }, {
   timestamps: true

@@ -13,41 +13,26 @@ Sơ đồ dưới đây thể hiện mối quan hệ (1-N, N-N) giữa các Coll
 
 ```mermaid
 erDiagram
-    CRAWL_SOURCE ||--o{ BOT_CONFIG : "1:N (1 Nguồn có nhiều bộ Config)"
-    CRAWL_SOURCE ||--o{ STORY : "1:N (1 Nguồn có nhiều truyện)"
     BOT_CONFIG ||--o{ STORY : "1:N (1 Bot cấu hình layout cho nhiều truyện)"
     STORY ||--o{ CHAPTER : "1:N (Chứa các chương)"
     STORY }o--|{ GENRE : "N:N (Thuộc nhiều thể loại)"
     STORY ||--o{ CRAWL_LOG : "1:N (Liên quan đến logs)"
     BOT_CONFIG ||--o{ CRAWL_LOG : "1:N (Liên quan đến logs)"
-    
-    CRAWL_SOURCE {
-        ObjectId _id PK
-        String name
-        String domain UK
-        Boolean isActive
-    }
 
     BOT_CONFIG {
         ObjectId _id PK
-        ObjectId sourceId FK
         String layoutName
-        String botType "COMIC / NOVEL"
-        String crawlStrategy "CHAPTER_LIST / FOLLOW_NEXT"
         String titleSelector
         String authorSelector
         String descriptionSelector
         String coverSelector
         String chapterListSelector
-        String nextChapterSelector
         String imageSelector
-        String contentSelector
         Boolean isActive
     }
 
     STORY {
         ObjectId _id PK
-        ObjectId sourceId FK
         ObjectId botConfigId FK
         String title
         String slug UK
@@ -73,8 +58,7 @@ erDiagram
         String chapterName
         Number chapterIndex
         String language "vi/en/ja"
-        String[] images "Mảng ảnh COMIC"
-        String content "Nội dung chữ NOVEL"
+        String[] images "Mảng URLs ảnh"
         String sourceUrl
         Date createdAt
     }
@@ -102,47 +86,29 @@ erDiagram
 
 ---
 
-### 1. Collection: `crawl_sources`
-Lưu trữ thông tin các trang web nguồn cung cấp truyện.
+### 1. Collection: `bot_configs`
+Lưu trữ chi tiết các CSS Selectors để bóc tách dữ liệu DOM HTML cho nguồn cào `dilib.vn`.
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Khóa | Mô tả |
 |---|---|---|---|---|
 | `_id` | ObjectId | Có | PK | Khóa chính tự sinh |
-| `name` | String | Có | - | Tên hiển thị của nguồn (VD: `"Nettruyen"`) |
-| `domain` | String | Có | UK | Tên miền của trang nguồn (VD: `"nettruyennew.com"`). Unique Index. |
-| `isActive` | Boolean | Có | - | Trạng thái kích hoạt (Default: `true`). Nếu `false` sẽ dừng mọi bot liên quan. |
-
----
-
-### 2. Collection: `bot_configs`
-Lưu trữ chi tiết các CSS Selectors để bóc tách dữ liệu DOM HTML.
-
-| Trường | Kiểu dữ liệu | Bắt buộc | Khóa | Mô tả |
-|---|---|---|---|---|
-| `_id` | ObjectId | Có | PK | Khóa chính tự sinh |
-| `sourceId` | ObjectId | Có | FK | Khóa ngoại trỏ về `crawl_sources._id` |
-| `layoutName` | String | Có | - | Tên gọi nhớ cho bộ cấu hình layout này (VD: `"Layout Nettruyen"`) |
-| `botType` | String | Có | - | Phân loại nội dung: `COMIC` hoặc `NOVEL` |
-| `crawlStrategy` | String | Có | - | Chiến lược cào chương: `CHAPTER_LIST` hoặc `FOLLOW_NEXT` |
+| `layoutName` | String | Có | - | Tên gợi nhớ cho bộ cấu hình layout này (VD: `"Dilib Mobile"`) |
 | `titleSelector` | String | Có | - | CSS Selector trỏ tới Tiêu đề truyện ở trang chi tiết |
 | `authorSelector` | String | Không | - | CSS Selector trỏ tới Tác giả ở trang chi tiết |
 | `descriptionSelector` | String | Không | - | CSS Selector trỏ tới Mô tả/Tóm tắt truyện |
 | `coverSelector` | String | Không | - | CSS Selector trỏ tới ảnh bìa truyện |
-| `chapterListSelector` | String | Không | - | CSS Selector danh sách chương (Bắt buộc nếu `CHAPTER_LIST`) |
-| `nextChapterSelector` | String | Không | - | CSS Selector nút "Chương sau" (Bắt buộc nếu `FOLLOW_NEXT`) |
-| `imageSelector` | String | Không | - | CSS Selector mảng ảnh đọc truyện (Bắt buộc nếu `COMIC`) |
-| `contentSelector` | String | Không | - | CSS Selector thẻ text nội dung (Bắt buộc nếu `NOVEL`) |
+| `chapterListSelector` | String | Có | - | CSS Selector danh sách chương (Bắt buộc) |
+| `imageSelector` | String | Có | - | CSS Selector mảng ảnh đọc truyện (Bắt buộc) |
 | `isActive` | Boolean | Có | - | Trạng thái hoạt động của con Bot này (Default: `true`) |
 
 ---
 
-### 3. Collection: `stories`
+### 2. Collection: `stories`
 Lưu trữ thông tin chung (metadata) và cài đặt lập lịch cào của một bộ truyện.
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Khóa | Mô tả |
 |---|---|---|---|---|
 | `_id` | ObjectId | Có | PK | Khóa chính tự sinh |
-| `sourceId` | ObjectId | Có | FK | Khóa ngoại trỏ về `crawl_sources._id` |
 | `botConfigId` | ObjectId | Có | FK | Khóa ngoại trỏ về `bot_configs._id` |
 | `selectorOverrides` | Object | Không | - | Chứa các custom CSS selectors ghi đè `bot_configs` cho riêng truyện này (VD: `{ imageSelector: ".custom-img" }`) |
 | `title` | String | Có | - | Tên bộ truyện |
@@ -164,7 +130,7 @@ Lưu trữ thông tin chung (metadata) và cài đặt lập lịch cào của m
 
 ---
 
-### 4. Collection: `chapters`
+### 3. Collection: `chapters`
 Lưu trữ nội dung chi tiết từng chương (chỉ lưu bản dịch đầy đủ đã kiểm duyệt).
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Khóa | Mô tả |
@@ -174,15 +140,14 @@ Lưu trữ nội dung chi tiết từng chương (chỉ lưu bản dịch đầy
 | `chapterName` | String | Có | - | Tên chương (VD: `Chapter 1`, `Chương 2`) |
 | `chapterIndex` | Number | Có | - | Số thứ tự chương để sắp xếp (VD: `1`, `2.5`) |
 | `language` | String | Không | - | Mã ngôn ngữ (VD: `vi`). Default: `vi` |
-| `images` | [String] | Không | - | Mảng URLs ảnh đã nén .webp từ Cloudinary (Dành cho `COMIC`) |
-| `content` | String | Không | - | Văn bản đọc truyện chữ đã được lọc sạch (Dành cho `NOVEL`) |
+| `images` | [String] | Có | - | Mảng URLs ảnh đã nén .webp từ Cloudinary |
 | `sourceUrl` | String | Có | - | URL gốc của chương này trên trang nguồn |
 | `createdAt` | Date | Có | - | Thời gian tạo chương |
 | `updatedAt` | Date | Có | - | Thời gian cập nhật chương gần nhất (Dùng cho Smart Crawl) |
 
 ---
 
-### 5. Collection: `crawl_logs`
+### 4. Collection: `crawl_logs`
 Lịch sử chạy cào để phục vụ kiểm soát lỗi và thống kê.
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Khóa | Mô tả |
@@ -200,7 +165,7 @@ Lịch sử chạy cào để phục vụ kiểm soát lỗi và thống kê.
 
 ---
 
-### 6. Collection: `genres`
+### 5. Collection: `genres`
 Danh mục các thể loại truyện đọc.
 
 | Trường | Kiểu dữ liệu | Bắt buộc | Khóa | Mô tả |
@@ -215,8 +180,7 @@ Danh mục các thể loại truyện đọc.
 ### Các Indexes Quan Trọng
 | Collection | Index Fields | Type | Mục đích |
 |---|---|---|---|
-| `crawl_sources` | `{ domain: 1 }` | Unique | Tránh trùng lặp Domain nguồn cào |
-| `bot_configs` | `{ sourceId: 1, isActive: 1 }` | Compound | Truy vấn nhanh cấu hình selectors của nguồn |
+| `bot_configs` | `{ layoutName: 1 }` | Unique | Tránh trùng lặp tên cấu hình layout |
 | `stories` | `{ slug: 1 }` | Unique | Tối ưu hiển thị và truy vấn URL truyện của khách đọc |
 | `stories` | `{ botConfigId: 1 }` | Normal | Hỗ trợ truy vấn danh sách truyện theo Bot Config |
 | `stories` | `{ isAutoUpdate: 1, nextCrawlTime: 1 }`| Compound | Tối ưu câu lệnh quét lấy hàng đợi truyện cào của Scheduler |

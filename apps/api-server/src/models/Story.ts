@@ -3,7 +3,6 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 type ObjectId = Types.ObjectId;
 
 interface IStory extends Document {
-    sourceId: ObjectId,
     botConfigId: ObjectId,
     selectorOverrides: Record<string, any>,
     title: string,
@@ -25,7 +24,6 @@ interface IStory extends Document {
 }
 
 const storySchema = new Schema<IStory>({
-    sourceId: { type: Schema.Types.ObjectId, required: true, ref: "CrawlSource" },
     botConfigId: { type: Schema.Types.ObjectId, required: true, ref: "BotConfig" },
     selectorOverrides: { type: Schema.Types.Mixed, required: false },
     title: { type: String, required: true },

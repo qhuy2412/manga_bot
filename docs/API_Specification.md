@@ -241,69 +241,36 @@ Các API này yêu cầu Header `Authorization: Bearer <JWT_TOKEN>`.
 
 ---
 
-### 3.2 CRUD `/api/v1/admin/sources` - Quản lý Nguồn cào (Sources)
-*   **Mô tả:** Các API thêm, sửa, xóa, lấy danh sách nguồn cào truyện.
-*   **Request Body (POST/PUT):**
-| Trường | Kiểu | Bắt buộc | Mô tả |
-|---|---|---|---|
-| `name` | String | Có | Tên nguồn (VD: `Nettruyen`) |
-| `domain` | String | Có | Tên miền (VD: `nettruyennew.com`) |
-| `isActive` | Boolean | Không | Trạng thái hoạt động (Default: `true`) |
-
-*   **Phản hồi mẫu (200 OK - GET list):**
-```json
-{
-  "data": [
-    {
-      "id": "64abc000e4b0c9a222222222",
-      "name": "Nettruyen",
-      "domain": "nettruyennew.com",
-      "isActive": true
-    }
-  ]
-}
-```
-
----
-
-### 3.3 POST `/api/v1/admin/bot-configs` - Tạo mới bộ cấu hình Bot cào
-*   **Mô tả:** Tạo mới bộ CSS selectors và quy tắc kiểm duyệt nội dung cho một Nguồn.
+### 3.2 POST `/api/v1/admin/bot-configs` - Tạo mới bộ cấu hình Bot cào
+*   **Mô tả:** Tạo mới bộ CSS selectors và quy tắc kiểm duyệt nội dung cho nguồn cào.
 *   **Request Body:**
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `sourceId` | String | Có | ID của Crawl Source liên kết |
-| `layoutName` | String | Có | Tên gợi nhớ layout cấu hình (VD: `Nettruyen Mobile`) |
-| `botType` | String | Có | Loại nội dung: `COMIC` hoặc `NOVEL` |
-| `crawlStrategy` | String | Có | Chiến lược cào: `CHAPTER_LIST` hoặc `FOLLOW_NEXT` |
+| `layoutName` | String | Có | Tên gợi nhớ layout cấu hình (VD: `Dilib Mobile`) |
 | `titleSelector` | String | Có | Selector bóc tiêu đề truyện tại trang detail |
 | `authorSelector` | String | Không | Selector bóc tác giả truyện |
 | `descriptionSelector`| String| Không | Selector bóc tóm tắt truyện |
 | `coverSelector` | String | Không | Selector bóc link ảnh bìa |
-| `chapterListSelector`| String| Không | Selector bóc mảng thẻ chứa link chương (Bắt buộc nếu `CHAPTER_LIST`) |
-| `nextChapterSelector`| String| Không | Selector bóc nút next chương (Bắt buộc nếu `FOLLOW_NEXT`) |
-| `imageSelector` | String | Không | Selector bóc mảng ảnh chương đọc (Bắt buộc nếu `COMIC`) |
-| `contentSelector` | String | Không | Selector bóc văn bản nội dung chương (Bắt buộc nếu `NOVEL`) |
+| `chapterListSelector`| String| Có | Selector bóc mảng thẻ chứa link chương (Bắt buộc) |
+| `imageSelector` | String | Có | Selector bóc mảng ảnh chương đọc (Bắt buộc) |
 
 *   **Phản hồi mẫu (201 Created):**
 ```json
 {
   "data": {
     "id": "64abc888e4b0c9a333333333",
-    "layoutName": "Nettruyen Mobile",
-    "botType": "COMIC",
-    "crawlStrategy": "CHAPTER_LIST"
+    "layoutName": "Dilib Mobile"
   }
 }
 ```
 
 ---
 
-### 3.4 CRUD `/api/v1/admin/stories` - Quản lý Truyện (Stories)
+### 3.3 CRUD `/api/v1/admin/stories` - Quản lý Truyện (Stories)
 *   **Mô tả:** API thêm mới, sửa, xóa truyện. (Thường dùng để add truyện thủ công trước khi cào).
 *   **Request Body (POST/PUT):**
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `sourceId` | String | Có | ID của Nguồn cào |
 | `botConfigId` | String | Có | ID của Bot Config |
 | `sourceUrl` | String | Có | URL gốc của truyện |
 | `cronSchedule`| String | Không | Lịch cào tự động (VD: `*/30 * * * *`) |
@@ -323,7 +290,7 @@ Các API này yêu cầu Header `Authorization: Bearer <JWT_TOKEN>`.
 
 ---
 
-### 3.5 POST `/api/v1/admin/crawl-jobs/trigger` - Kích hoạt cào truyện thủ công (Full Crawl)
+### 3.4 POST `/api/v1/admin/crawl-jobs/trigger` - Kích hoạt cào truyện thủ công (Full Crawl)
 *   **Mô tả:** Thêm một bộ truyện và đẩy Job khám phá chương (Discovery) vào Queue BullMQ.
 *   **Request Body:**
 | Trường | Kiểu | Bắt buộc | Mô tả |
@@ -344,7 +311,7 @@ Các API này yêu cầu Header `Authorization: Bearer <JWT_TOKEN>`.
 
 ---
 
-### 3.6 GET `/api/v1/admin/logs` - Giám sát lịch sử cào truyện (Crawl Logs)
+### 3.5 GET `/api/v1/admin/logs` - Giám sát lịch sử cào truyện (Crawl Logs)
 *   **Mô tả:** Xem log cào truyện phục vụ Debug lỗi.
 *   **Query Parameters:**
 | Tham số | Kiểu | Bắt buộc | Mô tả |
@@ -457,7 +424,6 @@ Các API này yêu cầu Header `X-Internal-Token: <SECRET_STRING>` cấu hình 
   "data": {
     "id": "64abc888e4b0c9a333333333",
     "botType": "COMIC",
-    "crawlStrategy": "CHAPTER_LIST",
     "imageSelector": ".reading-detail img",
     "rawTitleKeywords": ["raw", "bản thô"],
     "minImagesCount": 5
@@ -476,8 +442,7 @@ Các API này yêu cầu Header `X-Internal-Token: <SECRET_STRING>` cấu hình 
 | `chapterName` | String | Có | Tên chương (VD: `Chapter 701`) |
 | `chapterIndex`| Number | Có | Thứ tự chương để sắp xếp |
 | `language` | String | Không | Ngôn ngữ chương (Default: `vi`) |
-| `images` | Array | Không | Mảng URLs ảnh CDN (Bắt buộc với `COMIC`) |
-| `content` | String | Không | Văn bản HTML sạch (Bắt buộc với `NOVEL`) |
+| `images` | Array | Có | Mảng URLs ảnh CDN (Bắt buộc) |
 | `sourceUrl` | String | Có | URL gốc của trang đọc chương đó ở nguồn để log |
 
 *   **Phản hồi mẫu (201 Created):**
@@ -503,8 +468,7 @@ Các API này yêu cầu Header `X-Internal-Token: <SECRET_STRING>` cấu hình 
 *   **Request Body:**
 | Trường | Kiểu | Bắt buộc | Mô tả |
 |---|---|---|---|
-| `images` | Array | Không | Mảng ảnh CDN dịch mới (COMIC) |
-| `content` | String | Không | Nội dung text dịch mới (NOVEL) |
+| `images` | Array | Có | Mảng ảnh CDN dịch mới (Bắt buộc) |
 
 *   **Phản hồi mẫu (200 OK):**
 ```json

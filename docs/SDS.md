@@ -66,7 +66,6 @@ src/
 │   ├── stories/        → CRUD /api/v1/stories
 │   ├── chapters/       → CRUD /api/v1/chapters
 │   ├── genres/         → CRUD /api/v1/genres
-│   ├── sources/        → CRUD /api/v1/admin/sources
 │   ├── bot-configs/    → CRUD /api/v1/admin/bot-configs
 │   ├── crawl-jobs/     → POST /api/v1/admin/crawl-jobs/trigger
 │   └── crawl-logs/     → GET /api/v1/admin/logs
@@ -200,93 +199,26 @@ sequenceDiagram
     end
 ```
 
-### 3.4 Phân Tách Đường Ống Xử Lý Nội Dung (Comic vs Novel Pipelines)
-Sơ đồ thể hiện luồng tải và xử lý nội dung chi tiết của chương truyện tùy thuộc vào loại bot cào (`COMIC` vs `NOVEL`).
+### 3.4 Đường Ống Xử Lý Nội Dung Truyện Tranh (Comic Pipeline)
+Sơ đồ thể hiện luồng tải và xử lý nội dung chi tiết của chương truyện tranh:
 
 ```mermaid
 flowchart TD
     Start([Nhận Job FETCH_CHAPTER]) --> FetchHTML[Fetch HTML trang đọc chương]
-    FetchHTML --> CheckBotType{botConfig.botType}
-    
-    %% Nhánh TRUYỆN TRANH
-    CheckBotType -- COMIC --> ExtractImg[Bóc tách mảng URLs ảnh gốc\nbằng imageSelector]
+    FetchHTML --> ExtractImg[Bóc tách mảng URLs ảnh gốc\nbằng imageSelector]
     ExtractImg --> LoopImg[Duyệt qua từng URL ảnh]
     LoopImg --> DownImg[Tải ảnh gốc về RAM dạng Buffer\nBypass bằng Referer Header]
     DownImg --> Sharp[Sharp: Chuyển sang WebP\nNén chất lượng 75%]
     Sharp --> Upload[Upload Buffer lên Cloudinary CDN]
     Upload --> CollectUrls[Gom toàn bộ CDN URLs của chương]
-    CollectUrls --> SaveComic[POST /api/v1/internal/chapters\nLưu mảng images và content = null]
-    
-    %% Nhánh TRUYỆN CHỮ
-    CheckBotType -- NOVEL --> ExtractText[Bóc tách HTML chứa nội dung đọc\nbằng contentSelector]
-    ExtractText --> Sanitize[Sanitize-HTML: Lọc sạch thẻ script, quảng cáo,\nchừa lại thẻ p, br, b, i]
-    Sanitize --> SaveNovel[POST /api/v1/internal/chapters\nLưu content và images = rỗng]
-    
+    CollectUrls --> SaveComic[POST /api/v1/internal/chapters\nLưu mảng images]
     SaveComic --> End([Hoàn thành & Cập nhật lastChapterUrl])
-    SaveNovel --> End
 ```
 
-### 3.5 Thiết kế Khả năng Mở rộng (Scalability & Extensibility Design)
-Hệ thống được thiết kế để dễ dàng mở rộng sang các chiến lược cào mới (như `FOLLOW_NEXT`) và các loại nội dung mới trong tương lai mà không cần thay đổi kiến trúc lõi của Worker. Việc này được thực hiện thông qua **Strategy Pattern** phối hợp với **Factory Pattern** và **Database-Driven Routing** (Định tuyến dựa trên cấu hình Database).
-
-#### 1. Định tuyến dựa trên Cấu hình CSDL (Database-Driven Routing)
-Tất cả các hành vi của Crawler đều không được code cứng (hardcode). Khi nhận một Job từ hàng đợi, Worker sẽ dựa vào cấu hình của Bot (`bot_configs`) để định tuyến xử lý:
-*   **`botType` (`'COMIC' | 'NOVEL'`)**: Xác định kiểu nội dung của truyện để tải/nén ảnh hay bóc text sạch.
-*   **`crawlStrategy` (`'CHAPTER_LIST' | 'FOLLOW_NEXT'`)**: Xác định cách cào chương (lấy toàn bộ mục lục của truyện hay đi tuần tự qua nút Next).
-
-#### 2. Thiết kế các Hợp đồng Interface (Contract Design)
-Mọi chiến lược khám phá chương và bộ xử lý nội dung đều phải thực thi một Interface chuẩn hóa. Điều này đảm bảo tính hoán đổi (Interchangeability):
-*   **Interface cho Chiến lược khám phá (`IDiscoveryStrategy`):**
-    ```typescript
-    export interface IChapter {
-      chapterName: string;
-      chapterIndex: number;
-      sourceUrl: string;
-    }
-
-    export interface IDiscoveryStrategy {
-      discover(storyUrl: string, config: BotConfigDto): Promise<IChapter[]>;
-    }
-    ```
-*   **Interface cho Bộ xử lý nội dung (`IContentProcessor`):**
-    ```typescript
-    export interface IProcessedContent {
-      images?: string[]; // Dành cho COMIC
-      content?: string;  // Dành cho NOVEL
-    }
-
-    export interface IContentProcessor {
-      process(chapterUrl: string, config: BotConfigDto): Promise<IProcessedContent>;
-    }
-    ```
-
-#### 3. Sơ đồ Hoạt động của Factory & Strategy (Strategy Routing Flow)
-```mermaid
-graph TD
-    QueueJob[Nhận Job Crawl từ Queue] --> GetConfig[Fetch BotConfig từ API Server]
-    GetConfig --> RouteStrategy{Đọc crawlStrategy}
-    
-    RouteStrategy -- "CHAPTER_LIST" --> RunList[DiscoveryFactory: Khởi tạo ChapterListStrategy]
-    RouteStrategy -- "FOLLOW_NEXT (Tương lai)" --> RunNext[DiscoveryFactory: Khởi tạo FollowNextStrategy]
-    
-    RunList --> RunDiscover[Thực thi strategy.discover]
-    RunNext --> RunDiscover
-    
-    RunDiscover --> RouteType{Đọc botType}
-    RouteType -- "COMIC" --> RunComic[ContentProcessorFactory: Khởi tạo ComicProcessor]
-    RouteType -- "NOVEL" --> RunNovel[ContentProcessorFactory: Khởi tạo NovelProcessor]
-    
-    RunComic --> RunProcess[Thực thi processor.process]
-    RunNovel --> RunProcess
-    
-    RunProcess --> SaveDB[Gửi payload về API Server lưu CSDL]
-```
-
-#### 4. Quy trình Mở rộng khi thêm Chiến lược mới (Ví dụ: Thêm `FOLLOW_NEXT`)
-Khi hệ thống cần hỗ trợ thêm cào tuần tự Next Button (Follow-Next) ở giai đoạn sau, lập trình viên thực hiện theo 3 bước:
-1.  **Cập nhật schema CSDL:** Thêm giá trị `'FOLLOW_NEXT'` vào enum của trường `crawlStrategy` trong Database.
-2.  **Tạo Class Chiến lược mới:** Tạo file `follow-next.strategy.ts` thực thi interface `IDiscoveryStrategy` để viết logic tìm nút Next và trả về mảng chương.
-3.  **Đăng ký vào Factory:** Cập nhật file `factory.ts` của `DiscoveryFactory` để trả về Class mới khi nhận tham số `'FOLLOW_NEXT'`.
+### 3.5 Thiết kế Tối giản của Worker
+Để tối ưu hóa hiệu năng và đơn giản hóa hệ thống, Crawler Worker được thiết kế chuyên biệt chỉ chạy một luồng xử lý duy nhất cho truyện tranh:
+- **Không sử dụng Strategy/Factory Pattern:** Luồng cào mục lục và xử lý ảnh chạy tuần tự trực tiếp, giúp mã nguồn nhẹ và dễ bảo trì.
+- **Tập trung vào Comic Pipeline:** Toàn bộ tiến trình chỉ xử lý tải ảnh, nén bằng Sharp và lưu trữ CDN.
 
 ---
 
@@ -355,8 +287,8 @@ stateDiagram-v2
 | Cloudinary upload fail | ✅ Có | Retry 3 lần |
 
 ### 5.3 Giới hạn Tải & Concurrency (Rate Limiting)
-Sử dụng tính năng Rate Limiter của BullMQ trên mỗi Queue tương ứng với một `sourceId` (hoặc Domain). Việc này đảm bảo:
-- Khống chế số lượng Request tối đa gửi đến 1 trang web nguồn trong một khoảng thời gian (VD: 5 req/s).
+Sử dụng tính năng Rate Limiter của BullMQ trên hàng đợi cào duy nhất. Việc này đảm bảo:
+- Khống chế số lượng Request tối đa gửi đến trang web nguồn dilib.vn trong một khoảng thời gian (VD: 5 req/s).
 - Chống bị nguồn cào block IP do "dội bom" request quá nhanh khi có hàng ngàn job `FETCH_CHAPTER` được đẩy vào Queue cùng lúc.
 
 ### 5.4 Cảnh báo Tự động (Smart Alerting)
@@ -372,8 +304,6 @@ Chi tiết đầy đủ xem tại **[Database_Design.md](file:///d:/MangaBot/doc
 ### 6.1 Tóm tắt quan hệ
 ```mermaid
 erDiagram
-    CRAWL_SOURCE ||--o{ BOT_CONFIG : "1:N (1 Nguồn có nhiều bộ Config)"
-    CRAWL_SOURCE ||--o{ STORY : "1:N (1 Nguồn có nhiều truyện)"
     BOT_CONFIG ||--o{ STORY : "1:N (1 Bot cấu hình layout cho nhiều truyện)"
     STORY ||--o{ CHAPTER : "1:N (Chứa các chương)"
     STORY }o--|{ GENRE : "N:N (Thuộc nhiều thể loại)"
@@ -384,8 +314,7 @@ erDiagram
 ### 6.2 Indexes quan trọng
 | Collection | Index | Mục đích |
 |---|---|---|
-| `crawl_sources` | `{ domain: 1 }` UNIQUE | Truy vấn nguồn cào truyện |
-| `bot_configs` | `{ sourceId: 1, isActive: 1 }` | Lấy danh sách layout bot |
+| `bot_configs` | `{ layoutName: 1 }` UNIQUE | Lấy nhanh cấu hình layout bot |
 | `stories` | `{ slug: 1 }` UNIQUE | Tìm kiếm truyện nhanh theo slug |
 | `stories` | `{ botConfigId: 1 }` | Truy vấn các truyện dùng chung một cấu hình Bot |
 | `stories` | `{ isAutoUpdate: 1, nextCrawlTime: 1 }` | Scheduler tìm truyện đến hẹn quét tự động |
