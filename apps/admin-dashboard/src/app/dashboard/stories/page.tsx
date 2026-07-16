@@ -20,6 +20,9 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
+import { ConfigProvider, theme } from "antd";
+import { Cron } from "react-js-cron";
+import "react-js-cron/dist/styles.css";
 
 interface Story {
     _id: string;
@@ -53,6 +56,59 @@ interface BotConfig {
     chapterListSelector: string;
     imageSelector: string;
 }
+
+const vietnameseLocale = {
+    everyText: "mỗi",
+    emptyMonths: "mọi tháng",
+    emptyMonthDays: "mọi ngày trong tháng",
+    emptyMonthDaysShort: "mọi ngày",
+    emptyWeekDays: "mọi ngày trong tuần",
+    emptyWeekDaysShort: "mọi ngày",
+    emptyHours: "mọi giờ",
+    emptyMinutes: "mọi phút",
+    emptyMinutesForHourPeriod: "mọi phút",
+    yearOption: "năm",
+    monthOption: "tháng",
+    weekOption: "tuần",
+    dayOption: "ngày",
+    hourOption: "giờ",
+    minuteOption: "phút",
+    rebootOption: "khởi động lại",
+    prefixPeriod: "Theo",
+    prefixMonths: "trong",
+    prefixMonthDays: "vào ngày",
+    prefixWeekDays: "vào thứ",
+    prefixWeekDaysForMonthAndYearPeriod: "và vào thứ",
+    prefixHours: "lúc",
+    prefixMinutes: "vào phút thứ",
+    prefixMinutesForHourPeriod: "vào phút thứ",
+    suffixMinutesForHourPeriod: "",
+    errorInvalidCron: "Mã Cron không hợp lệ",
+    clearButtonText: "Xóa sạch",
+    weekDays: [
+        "Chủ nhật",
+        "Thứ hai",
+        "Thứ ba",
+        "Thứ tư",
+        "Thứ năm",
+        "Thứ sáu",
+        "Thứ bảy"
+    ],
+    months: [
+        "Tháng 1",
+        "Tháng 2",
+        "Tháng 3",
+        "Tháng 4",
+        "Tháng 5",
+        "Tháng 6",
+        "Tháng 7",
+        "Tháng 8",
+        "Tháng 9",
+        "Tháng 10",
+        "Tháng 11",
+        "Tháng 12"
+    ]
+};
 
 export default function StoriesPage() {
     const searchParams = useSearchParams();
@@ -587,20 +643,45 @@ export default function StoriesPage() {
                                 </div>
 
                                 {/* Cron Schedule */}
-                                <div className="space-y-2">
-                                    <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider block flex items-center space-x-1">
+                                <div className="space-y-2 sm:col-span-2 bg-[#11131c]/50 p-4 rounded-xl border border-slate-800">
+                                    <label className="text-xs font-semibold text-gray-300 uppercase tracking-wider block flex items-center space-x-1 mb-2">
                                         <Calendar className="w-3.5 h-3.5" />
-                                        <span>Cron cào tự động</span>
+                                        <span>Cấu hình chu kỳ cào (Cron Schedule)</span>
                                     </label>
-                                    <input
-                                        type="text"
-                                        required
-                                        disabled={!isAutoUpdate}
-                                        value={cronSchedule}
-                                        onChange={(e) => setCronSchedule(e.target.value)}
-                                        placeholder="VD: 0 9 * * 1 (Quét mỗi Thứ 2 lúc 9:00)"
-                                        className="w-full bg-[#11131c] text-white px-4 py-2.5 rounded-xl border border-slate-800 focus:border-violet-500 outline-none transition-all text-sm placeholder-gray-650 disabled:opacity-40"
-                                    />
+                                    
+                                    <div className="space-y-3">
+                                        <div className="p-3 bg-slate-950/60 rounded-xl border border-slate-850 overflow-x-auto">
+                                            <ConfigProvider
+                                                theme={{
+                                                    algorithm: theme.darkAlgorithm,
+                                                    token: {
+                                                        colorPrimary: '#8b5cf6',
+                                                        colorBgContainer: '#11131c',
+                                                        colorBorder: '#1e293b',
+                                                    }
+                                                }}
+                                            >
+                                                <Cron 
+                                                    value={cronSchedule} 
+                                                    setValue={setCronSchedule}
+                                                    disabled={!isAutoUpdate}
+                                                    locale={vietnameseLocale}
+                                                />
+                                            </ConfigProvider>
+                                        </div>
+
+                                        <div className="flex items-center justify-between gap-3 text-xs bg-slate-900/30 p-2 rounded-lg border border-slate-850/40">
+                                            <span className="text-slate-400 font-medium">Mã biểu thức Cron:</span>
+                                            <input
+                                                type="text"
+                                                required
+                                                disabled={!isAutoUpdate}
+                                                value={cronSchedule}
+                                                onChange={(e) => setCronSchedule(e.target.value)}
+                                                className="bg-slate-950 text-violet-400 font-mono text-xs px-2.5 py-1 rounded border border-slate-800 text-right focus:border-violet-500 focus:outline-none w-48"
+                                            />
+                                        </div>
+                                    </div>
                                 </div>
 
                                 {/* Metadata fields (only visible and required when editing/reviewing) */}
