@@ -11,7 +11,7 @@ export class BotConfigRepository {
         return await this.botConfigModel.findById(id);
     }
     async findByLayoutName(layoutName: string) {
-        return await this.botConfigModel
+        return await this.botConfigModel.findOne({ layoutName });
     }
     async findAll() {
         return await this.botConfigModel.find();

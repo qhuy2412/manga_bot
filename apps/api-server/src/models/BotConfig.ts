@@ -1,7 +1,7 @@
 import mongoose, { ObjectId } from "mongoose";
 import { Schema, Document } from "mongoose";
 
-interface IBotConfig extends Document {
+export interface IBotConfig extends Document {
     layoutName: string,
     titleSelector: string,
     authorSelector: string,

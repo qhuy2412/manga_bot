@@ -46,7 +46,7 @@ export class BotConfigController {
                 return;
             }
             const newConfig = await this.botConfigService.createBotConfig(validation.data);
-            res.status(200).json({
+            res.status(201).json({
                 data: newConfig
             })
         } catch (error) {
