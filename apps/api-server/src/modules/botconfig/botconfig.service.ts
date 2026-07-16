@@ -69,7 +69,7 @@ export class BotConfigService {
 
             // 2. Nếu tìm thấy chương, lấy chương đầu tiên để cào thử ảnh
             if (chaptersFound > 0 && data.imageSelector) {
-                let firstChapterUrl = chapterLinks.first().attr("href");
+                let firstChapterUrl = chapterLinks.last().attr("href");
                 if (firstChapterUrl) {
                     // Chuyển link tương đối thành tuyệt đối nếu cần
                     if (firstChapterUrl.startsWith("/")) {
