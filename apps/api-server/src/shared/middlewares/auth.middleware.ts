@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { config } from "../config/config";
+import { config } from "../../config/config";
 import jwt from "jsonwebtoken";
 
 const JWT_SECRET = config.JWT_SECRET;
@@ -15,7 +15,7 @@ export interface AuthenticationRequest extends Request {
 
 export const authMiddleware = (req: AuthenticationRequest, res: Response, next: NextFunction): void => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer")) {
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
         res.status(401).json({ message: "Invalid token!" });
         return;
     };
