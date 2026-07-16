@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { Document, ObjectId, Schema } from 'mongoose';
 
-interface ICrawlLog extends Document {
+export interface ICrawlLog extends Document {
     storyId: ObjectId,
     botConfigId: ObjectId,
     jobType: string,
@@ -14,8 +14,8 @@ interface ICrawlLog extends Document {
 }
 
 const crawlLogSchema = new Schema<ICrawlLog>({
-    storyId: { type: String, required: true, ref: "Story" },
-    botConfigId: { type: String, required: true, ref: "BotConfig" },
+    storyId: { type: Schema.Types.ObjectId, required: true, ref: "Story" },
+    botConfigId: { type: Schema.Types.ObjectId, required: true, ref: "BotConfig" },
     jobType: { type: String, required: true, enum: ["FULL_CRAWL", "CRON_CRAWL"] },
     targetUrl: { type: String, required: true },
     status: { type: String, required: true, enum: ["SUCCESS", "FAILED"] },
