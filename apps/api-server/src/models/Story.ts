@@ -2,7 +2,7 @@ import mongoose, { Schema, Document, Types } from "mongoose";
 
 type ObjectId = Types.ObjectId;
 
-interface IStory extends Document {
+export interface IStory extends Document {
     botConfigId: ObjectId,
     selectorOverrides: Record<string, any>,
     title: string,
@@ -34,8 +34,8 @@ const storySchema = new Schema<IStory>({
     genres: { type: [Schema.Types.ObjectId], required: true, ref: "Genre", default: [] },
     status: { type: String, required: true, enum: ["Ongoing", "Completed", "Hidden"] },
     sourceUrl: { type: String, required: true },
-    lastChapterUrl: { type: String, required: true },
-    latestChapterHash: { type: String, required: true },
+    lastChapterUrl: { type: String, required: true, default: "" },
+    latestChapterHash: { type: String, required: true, default: "" },
     cronSchedule: { type: String },
     isAutoUpdate: { type: Boolean, required: true, default: true },
     nextCrawlTime: { type: Date },
