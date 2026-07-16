@@ -28,11 +28,24 @@ const StoryBaseSchema = z.object({
     nextCrawlTime: z.coerce.date()
 });
 
-// 2. Schema dùng cho CREATE: Thêm giá trị mặc định vào
-export const CreateStorySchema = StoryBaseSchema.extend({
+// 2. Schema dùng cho CREATE: Chỉ yêu cầu các trường cần thiết, các trường cào tự động sẽ được backend tự điền
+export const CreateStorySchema = z.object({
+    botConfigId: z.string().min(1, "Bot Config is required!"),
+    sourceUrl: z.string().url("Invalid source URL format").refine((val) => {
+        try {
+            const url = new URL(val);
+            return url.hostname === hostName || url.hostname.endsWith('.' + hostName);
+        } catch (e) {
+            return false;
+        }
+    }, {
+        message: `Source URL must be from ${config.CRAWL_SOURCE_DOMAIN}`
+    }),
+    genres: z.array(z.string()).min(1, "Genres is required!"),
+    status: z.enum(["Ongoing", "Completed", "Hidden"]).default("Ongoing"),
     cronSchedule: z.string().default("0 9 * * 1"),
     isAutoUpdate: z.boolean().default(true),
-    nextCrawlTime: z.coerce.date().default(() => new Date()) // Dùng callback để tránh cố định thời gian
+    nextCrawlTime: z.coerce.date().default(() => new Date())
 });
 
 // 3. Schema dùng cho UPDATE: Biến tất cả thành optional và không có mặc định
