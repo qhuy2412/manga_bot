@@ -10,12 +10,14 @@ const repo = new StoryRepository();
 const service = new StoryService(repo);
 const controller = new StoryController(service);
 
-// Tất cả các routes của Story đều yêu cầu quyền Admin
-router.use(authMiddleware);
-
+// Public routes (Không yêu cầu xác thực)
 router.get("/", (req, res, next) => controller.findAll(req, res, next));
 router.get("/slug/:slug", (req, res, next) => controller.findBySlug(req, res, next));
 router.get("/:id", (req, res, next) => controller.findById(req, res, next));
+
+// Admin routes (Yêu cầu xác thực Admin)
+router.use(authMiddleware);
+
 router.post("/", (req, res, next) => controller.createStory(req, res, next));
 router.put("/:id", (req, res, next) => controller.updateStory(req, res, next));
 router.delete("/:id", (req, res, next) => controller.deleteStory(req, res, next));
