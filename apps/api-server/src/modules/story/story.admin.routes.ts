@@ -20,4 +20,7 @@ router.delete("/:id", (req, res, next) => controller.deleteStory(req, res, next)
 // Thủ công kích hoạt cào dữ liệu truyện
 router.post("/:id/crawl", (req, res, next) => controller.triggerCrawl(req, res, next));
 
+// Dừng cào dữ liệu truyện
+router.post("/:id/stop-crawl", (req, res, next) => controller.stopCrawl(req, res, next));
+
 export default router;

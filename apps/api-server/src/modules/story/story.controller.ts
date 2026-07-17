@@ -111,6 +111,15 @@ export class StoryController {
             // Đẩy vào hàng đợi
             const job = await addCrawlJob(storyId, jobType);
 
+            // Khởi tạo trạng thái cào trong DB
+            await this.storyService.updateCrawlProgress(storyId, {
+                state: "crawling",
+                current: 0,
+                total: 0,
+                currentChapterName: "Đang phân tích mục lục...",
+                jobId: job.id || ""
+            });
+
             res.status(200).json({
                 message: "Crawl job triggered successfully!",
                 data: {
@@ -161,6 +170,36 @@ export class StoryController {
             const story = await this.storyService.findInternalById(req.params.id as string);
             res.status(200).json({
                 data: story,
+            });
+        } catch (error: any) {
+            next(error);
+        }
+    }
+    async stopCrawl(req: Request, res: Response, next: NextFunction) {
+        try {
+            const result = await this.storyService.stopCrawl(req.params.id as string);
+            res.status(200).json({
+                data: result
+            });
+        } catch (error: any) {
+            next(error);
+        }
+    }
+    async updateCrawlProgress(req: Request, res: Response, next: NextFunction) {
+        try {
+            const result = await this.storyService.updateCrawlProgress(req.params.id as string, req.body);
+            res.status(200).json({
+                data: result
+            });
+        } catch (error: any) {
+            next(error);
+        }
+    }
+    async incrementCrawlProgress(req: Request, res: Response, next: NextFunction) {
+        try {
+            const result = await this.storyService.incrementCrawlProgress(req.params.id as string, req.body.currentChapterName as string);
+            res.status(200).json({
+                data: result
             });
         } catch (error: any) {
             next(error);

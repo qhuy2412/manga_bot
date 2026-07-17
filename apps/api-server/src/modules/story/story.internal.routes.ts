@@ -25,4 +25,10 @@ router.post("/:id/update-metadata", (req, res, next) => controller.updateMetadat
 // PATCH /api/v1/internal/stories/:id/hash
 router.patch("/:id/hash", (req, res, next) => controller.updateLastChapterHash(req, res, next));
 
+// PATCH /api/v1/internal/stories/:id/crawl-progress
+router.patch("/:id/crawl-progress", (req, res, next) => controller.updateCrawlProgress(req, res, next));
+
+// PATCH /api/v1/internal/stories/:id/increment-crawl-progress
+router.patch("/:id/increment-crawl-progress", (req, res, next) => controller.incrementCrawlProgress(req, res, next));
+
 export default router;

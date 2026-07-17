@@ -16,7 +16,8 @@ import {
     Settings,
     Layers,
     User,
-    Eye
+    Eye,
+    Square
 } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -39,6 +40,13 @@ interface Story {
     nextCrawlTime: string;
     botConfigId: string;
     views: number;
+    crawlStatus?: {
+        state: "idle" | "crawling" | "stopping";
+        current: number;
+        total: number;
+        currentChapterName: string;
+        jobId: string;
+    };
 }
 
 interface Genre {
@@ -211,6 +219,15 @@ export default function StoriesPage() {
         }
     };
 
+    const fetchDataSilently = async () => {
+        try {
+            const storiesRes = await api.get("/stories");
+            setStories(storiesRes.data.data);
+        } catch (error) {
+            console.error("Lỗi cập nhật tiến trình cào:", error);
+        }
+    };
+
     useEffect(() => {
         fetchData();
         // Check query action=new
@@ -218,6 +235,17 @@ export default function StoriesPage() {
             handleOpenCreate();
         }
     }, [searchParams]);
+
+    useEffect(() => {
+        // Kiểm tra xem có truyện nào đang cào hoặc đang dừng không
+        const isCrawling = stories.some(s => s.crawlStatus?.state === "crawling" || s.crawlStatus?.state === "stopping");
+        if (isCrawling) {
+            const interval = setInterval(() => {
+                fetchDataSilently();
+            }, 3000);
+            return () => clearInterval(interval);
+        }
+    }, [stories]);
 
     const resetForm = () => {
         setEditingId(null);
@@ -356,10 +384,31 @@ export default function StoriesPage() {
         try {
             const res = await api.post(`/admin/stories/${storyId}/crawl`, { jobType: "FULL_CRAWL" });
             alert(`Đã gửi lệnh cào truyện thành công! Job ID: ${res.data.data.jobId}`);
+            fetchDataSilently();
         } catch (err: any) {
             alert("Kích hoạt cào lỗi: " + (err.response?.data?.message || err.message));
         } finally {
             setCrawlingId(null);
+        }
+    };
+
+    const handleStopCrawl = async (storyId: string) => {
+        if (!confirm("Bạn có chắc chắn muốn dừng cào bộ truyện này không?")) return;
+        try {
+            await api.post(`/admin/stories/${storyId}/stop-crawl`);
+            // Cập nhật giao diện tạm thời thành trạng thái stopping
+            setStories(prev => prev.map(s => s._id === storyId ? { 
+                ...s, 
+                crawlStatus: { 
+                    state: "stopping",
+                    current: s.crawlStatus?.current || 0,
+                    total: s.crawlStatus?.total || 0,
+                    currentChapterName: s.crawlStatus?.currentChapterName || "Đang dừng...",
+                    jobId: s.crawlStatus?.jobId || ""
+                } 
+            } : s));
+        } catch (err: any) {
+            alert("Dừng cào lỗi: " + (err.response?.data?.message || err.message));
         }
     };
 
@@ -481,6 +530,33 @@ export default function StoriesPage() {
                                                             <span className="text-[9px] font-mono text-indigo-400 block">
                                                                 /{story.slug}
                                                             </span>
+                                                            {story.crawlStatus && story.crawlStatus.state !== "idle" && (
+                                                                <div className="mt-2 space-y-1 max-w-[200px]">
+                                                                    <div className="flex items-center justify-between text-[9px] font-semibold">
+                                                                        <span className={`${story.crawlStatus.state === "stopping" ? "text-red-400 animate-pulse" : "text-purple-400 animate-pulse"}`}>
+                                                                            {story.crawlStatus.state === "stopping" ? "Đang dừng cào..." : `Cào: ${story.crawlStatus.currentChapterName || "..."}`}
+                                                                        </span>
+                                                                        <span className="text-slate-400 font-mono">
+                                                                            {story.crawlStatus.total > 0 
+                                                                                ? `${Math.round((story.crawlStatus.current / story.crawlStatus.total) * 100)}%` 
+                                                                                : "0%"}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                                                                        <div 
+                                                                            className={`h-1.5 rounded-full transition-all duration-300 ${story.crawlStatus.state === "stopping" ? "bg-red-500" : "bg-purple-500"}`}
+                                                                            style={{ 
+                                                                                width: `${story.crawlStatus.total > 0 
+                                                                                    ? Math.min(100, Math.max(0, (story.crawlStatus.current / story.crawlStatus.total) * 100)) 
+                                                                                    : 0}%` 
+                                                                            }}
+                                                                        />
+                                                                    </div>
+                                                                    <div className="text-[8px] text-slate-500 font-mono">
+                                                                        Đã xong: {story.crawlStatus.current}/{story.crawlStatus.total} chaps
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 </td>
@@ -516,14 +592,25 @@ export default function StoriesPage() {
                                                 </td>
                                                 <td className="px-6 py-4 text-right">
                                                     <div className="flex items-center justify-end space-x-2">
-                                                        <button
-                                                            onClick={() => handleTriggerCrawl(story._id)}
-                                                            disabled={crawlingId === story._id}
-                                                            title="Kích hoạt cào ngay"
-                                                            className="p-2 bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
-                                                        >
-                                                            <Play className={`w-4 h-4 ${crawlingId === story._id ? "animate-pulse text-slate-500" : ""}`} />
-                                                        </button>
+                                                        {story.crawlStatus && (story.crawlStatus.state === "crawling" || story.crawlStatus.state === "stopping") ? (
+                                                            <button
+                                                                onClick={() => handleStopCrawl(story._id)}
+                                                                disabled={story.crawlStatus.state === "stopping"}
+                                                                title="Dừng cào ngay lập tức"
+                                                                className="p-2 bg-red-950/40 border border-red-500/30 hover:border-red-500/50 rounded-xl text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                                                            >
+                                                                <Square className={`w-4 h-4 ${story.crawlStatus.state === "stopping" ? "animate-pulse" : ""}`} />
+                                                            </button>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => handleTriggerCrawl(story._id)}
+                                                                disabled={crawlingId === story._id}
+                                                                title="Kích hoạt cào ngay"
+                                                                className="p-2 bg-slate-800 border border-slate-700 hover:border-slate-600 rounded-xl text-emerald-400 hover:text-emerald-300 disabled:opacity-50 transition-colors"
+                                                            >
+                                                                <Play className={`w-4 h-4 ${crawlingId === story._id ? "animate-pulse text-slate-500" : ""}`} />
+                                                            </button>
+                                                        )}
                                                         <button
                                                             onClick={() => handleOpenEdit(story)}
                                                             title="Sửa"

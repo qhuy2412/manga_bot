@@ -5,6 +5,7 @@ import { BotConfig } from "../../models";
 import axios from "axios";
 import * as cheerio from "cheerio";
 import crypto from 'crypto';
+import { crawlQueue } from "../../shared/queue/crawl.queue";
 
 export class StoryService {
     constructor(private storyRepo: StoryRepository) { }
@@ -201,5 +202,71 @@ export class StoryService {
             throw new NotFoundError("Story not found!");
         }
         return story;
+    }
+
+    async stopCrawl(id: string) {
+        const story = await this.storyRepo.findById(id);
+        if (!story) {
+            throw new NotFoundError("Story not found!");
+        }
+
+        // Đổi trạng thái sang stopping
+        story.crawlStatus.state = "stopping";
+        await this.storyRepo.update(id, story);
+
+        // Hủy tất cả các job đang chờ cào của truyện này trong queue
+        const jobs = await crawlQueue.getJobs(["waiting", "delayed"]);
+        let removedCount = 0;
+        for (const job of jobs) {
+            if (job.data && job.data.storyId === id) {
+                await job.remove();
+                removedCount++;
+            }
+        }
+        console.log(`[StoryService] Đã dừng cào truyện ${story.title} và gỡ ${removedCount} jobs khỏi Queue.`);
+        return { message: "Stopping request sent to workers. Queued jobs removed." };
+    }
+
+    async updateCrawlProgress(id: string, data: {
+        state?: "idle" | "crawling" | "stopping";
+        current?: number;
+        total?: number;
+        currentChapterName?: string;
+        jobId?: string;
+    }) {
+        const story = await this.storyRepo.findById(id);
+        if (!story) {
+            throw new NotFoundError("Story not found!");
+        }
+
+        if (data.state !== undefined) story.crawlStatus.state = data.state;
+        if (data.current !== undefined) story.crawlStatus.current = data.current;
+        if (data.total !== undefined) story.crawlStatus.total = data.total;
+        if (data.currentChapterName !== undefined) story.crawlStatus.currentChapterName = data.currentChapterName;
+        if (data.jobId !== undefined) story.crawlStatus.jobId = data.jobId;
+
+        // Nếu đã cào hoàn tất, đưa trạng thái về idle
+        if (story.crawlStatus.state === "crawling" && story.crawlStatus.total > 0 && story.crawlStatus.current >= story.crawlStatus.total) {
+            story.crawlStatus.state = "idle";
+        }
+
+        return await this.storyRepo.update(id, story);
+    }
+
+    async incrementCrawlProgress(id: string, currentChapterName: string) {
+        const story = await this.storyRepo.findById(id);
+        if (!story) {
+            throw new NotFoundError("Story not found!");
+        }
+
+        story.crawlStatus.current += 1;
+        story.crawlStatus.currentChapterName = currentChapterName;
+
+        // Nếu cào xong, chuyển trạng thái về idle
+        if (story.crawlStatus.total > 0 && story.crawlStatus.current >= story.crawlStatus.total) {
+            story.crawlStatus.state = "idle";
+        }
+
+        return await this.storyRepo.update(id, story);
     }
 }

@@ -19,6 +19,13 @@ export interface IStory extends Document {
     isAutoUpdate: boolean,
     nextCrawlTime: Date,
     views: number,
+    crawlStatus: {
+        state: "idle" | "crawling" | "stopping";
+        current: number;
+        total: number;
+        currentChapterName: string;
+        jobId: string;
+    },
     createdAt: Date,
     updatedAt: Date
 }
@@ -39,7 +46,14 @@ const storySchema = new Schema<IStory>({
     cronSchedule: { type: String },
     isAutoUpdate: { type: Boolean, required: true, default: true },
     nextCrawlTime: { type: Date },
-    views: { type: Number, default: 0 }
+    views: { type: Number, default: 0 },
+    crawlStatus: {
+        state: { type: String, enum: ["idle", "crawling", "stopping"], default: "idle" },
+        current: { type: Number, default: 0 },
+        total: { type: Number, default: 0 },
+        currentChapterName: { type: String, default: "" },
+        jobId: { type: String, default: "" }
+    }
 }, { timestamps: true });
 
 export default mongoose.model<IStory>("Story", storySchema);

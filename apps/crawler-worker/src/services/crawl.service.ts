@@ -49,15 +49,24 @@ export class CrawlerService {
 
             // Duyệt ngược danh sách chương (từ cũ nhất đến mới nhất) để đẩy vào queue theo đúng thứ tự
             const chaptersToQueue = parsedChapters.reverse();
+            const chaptersWithIndex = chaptersToQueue.map((c, i) => ({ ...c, absoluteIndex: i }));
 
-            for (let index = 0; index < chaptersToQueue.length; index++) {
-                const chapter = chaptersToQueue[index];
-
-                // Bỏ qua chương nếu cào thông minh (CRON_CRAWL) và đã tồn tại
+            const chaptersToQueueFiltered = chaptersWithIndex.filter(chapter => {
                 if (jobType === "CRON_CRAWL" && existingUrls.has(chapter.url)) {
-                    console.log(`[CrawlerService] Bỏ qua chương đã cào: ${chapter.name}`);
-                    continue;
+                    return false;
                 }
+                return true;
+            });
+
+            // Cập nhật tổng số chương cần cào trong DB để làm tổng tiến độ
+            await this.updateCrawlProgress(storyId, {
+                total: chaptersToQueueFiltered.length,
+                current: 0,
+                currentChapterName: "Đang xếp lịch cào..."
+            });
+
+            for (let index = 0; index < chaptersToQueueFiltered.length; index++) {
+                const chapter = chaptersToQueueFiltered[index];
 
                 // Đẩy job con cào chương này vào Queue
                 await queue.add(
@@ -65,7 +74,7 @@ export class CrawlerService {
                     {
                         storyId,
                         chapterName: chapter.name,
-                        chapterIndex: index,
+                        chapterIndex: chapter.absoluteIndex,
                         chapterUrl: chapter.url,
                         imageSelector: botConfig.imageSelector
                     },
@@ -94,6 +103,9 @@ export class CrawlerService {
         } catch (error: any) {
             console.error(`[CrawlerService] Phân phối job cào truyện thất bại:`, error.message);
             const executionTimeMs = Date.now() - startTime;
+
+            // Đưa trạng thái về idle
+            await this.updateCrawlProgress(storyId, { state: "idle" });
 
             // Lưu log thất bại
             await this.saveCrawlLog({
@@ -125,6 +137,15 @@ export class CrawlerService {
         console.log(`\n--- [CrawlerService] Bắt đầu cào chương ${chapterName}: ${chapterUrl} ---`);
         
         try {
+            // Kiểm tra trạng thái dừng cào từ Admin
+            const story = await this.fetchStoryDetails(storyId);
+            if (story.crawlStatus && story.crawlStatus.state === "stopping") {
+                console.log(`[CrawlerService] Hủy bỏ cào chương ${chapterName} do nhận lệnh dừng cào từ Admin.`);
+                // Reset trạng thái về idle
+                await this.updateCrawlProgress(storyId, { state: "idle" });
+                throw new Error("Crawl task cancelled by admin");
+            }
+
             const success = await this.crawlChapter(
                 storyId,
                 chapterName,
@@ -134,8 +155,10 @@ export class CrawlerService {
             );
             if (success) {
                 console.log(`[CrawlerService] Hoàn tất cào và đồng bộ chương ${chapterName}.`);
+                await this.incrementCrawlProgress(storyId, chapterName);
             } else {
                 console.warn(`[CrawlerService] Cào chương ${chapterName} không tạo ra ảnh.`);
+                await this.incrementCrawlProgress(storyId, chapterName);
             }
         } catch (err: any) {
             console.error(`[CrawlerService] Lỗi nghiêm trọng khi cào chương ${chapterName}:`, err.message);
@@ -151,6 +174,30 @@ export class CrawlerService {
             headers: { "x-internal-token": config.INTERNAL_TOKEN }
         });
         return res.data.data;
+    }
+
+    private static async updateCrawlProgress(storyId: string, payload: any) {
+        try {
+            await axios.patch(
+                `${config.API_SERVER_URL}/internal/stories/${storyId}/crawl-progress`,
+                payload,
+                { headers: { "x-internal-token": config.INTERNAL_TOKEN } }
+            );
+        } catch (err: any) {
+            console.error(`[CrawlerService] Lỗi cập nhật tiến độ: ${err.message}`);
+        }
+    }
+
+    private static async incrementCrawlProgress(storyId: string, currentChapterName: string) {
+        try {
+            await axios.patch(
+                `${config.API_SERVER_URL}/internal/stories/${storyId}/increment-crawl-progress`,
+                { currentChapterName },
+                { headers: { "x-internal-token": config.INTERNAL_TOKEN } }
+            );
+        } catch (err: any) {
+            console.error(`[CrawlerService] Lỗi tăng tiến độ: ${err.message}`);
+        }
     }
 
     /**
