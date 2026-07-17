@@ -10,6 +10,11 @@ const repo = new CrawlLogRepository();
 const service = new CrawlLogService(repo);
 const controller = new CrawlLogController(service);
 
+import { internalMiddleware } from "../../shared/middlewares/internal.middleware";
+
+// Route ghi log từ Crawler Worker
+router.post("/internal", internalMiddleware, (req, res, next) => controller.createLog(req, res, next));
+
 // Tất cả endpoints crawl log yêu cầu quyền admin
 router.use(authMiddleware);
 

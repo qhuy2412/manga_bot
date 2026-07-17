@@ -34,4 +34,15 @@ export class CrawlLogController {
             next(error);
         }
     }
+
+    async createLog(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const log = await this.crawlLogService.createLog(req.body);
+            res.status(201).json({
+                data: log
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
 }
