@@ -323,10 +323,10 @@ export default function StoriesPage() {
 
         try {
             if (editingId) {
-                await api.put(`/stories/${editingId}`, payload);
+                await api.put(`/admin/stories/${editingId}`, payload);
                 setFormSuccess("Cập nhật thông tin truyện thành công!");
             } else {
-                await api.post("/stories", payload);
+                await api.post("/admin/stories", payload);
                 setFormSuccess("Thêm truyện mới thành công! Hệ thống đang tự động cào thông tin chi tiết...");
             }
             fetchData();
@@ -344,7 +344,7 @@ export default function StoriesPage() {
     const handleDelete = async (id: string) => {
         if (!confirm("Bạn có chắc chắn muốn xóa bộ truyện này và toàn bộ các chương liên quan?")) return;
         try {
-            await api.delete(`/stories/${id}`);
+            await api.delete(`/admin/stories/${id}`);
             fetchData();
         } catch (error) {
             alert("Xóa truyện thất bại.");
@@ -354,7 +354,7 @@ export default function StoriesPage() {
     const handleTriggerCrawl = async (storyId: string) => {
         setCrawlingId(storyId);
         try {
-            const res = await api.post(`/stories/${storyId}/crawl`, { jobType: "FULL_CRAWL" });
+            const res = await api.post(`/admin/stories/${storyId}/crawl`, { jobType: "FULL_CRAWL" });
             alert(`Đã gửi lệnh cào truyện thành công! Job ID: ${res.data.data.jobId}`);
         } catch (err: any) {
             alert("Kích hoạt cào lỗi: " + (err.response?.data?.message || err.message));

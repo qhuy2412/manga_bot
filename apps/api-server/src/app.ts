@@ -33,7 +33,7 @@ app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/bot-configs", botConfigRoutes);
 app.use("/api/v1/genres", genreRoutes);
 app.use("/api/v1/stories", storyRoutes);
-app.use("/api/v1/stories", storyAdminRoutes);
+app.use("/api/v1/admin/stories", storyAdminRoutes);
 app.use("/api/v1/chapters", chapterRoutes);
 app.use("/api/v1/crawl-logs", crawlLogRoutes);
 
