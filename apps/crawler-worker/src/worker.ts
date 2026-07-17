@@ -5,14 +5,19 @@ import { CrawlerService } from "./services/crawl.service";
 
 console.log("[Worker] Khởi tạo Crawler Worker lắng nghe queue 'crawl-tasks'...");
 
-// Kết nối Redis
-const redisConnection = new IORedis(config.REDIS_URL, {
+// Kết nối Redis cho Worker
+const workerRedisConnection = new IORedis(config.REDIS_URL, {
+    maxRetriesPerRequest: null,
+});
+
+// Kết nối Redis riêng biệt cho Queue (Tránh tranh chấp kết nối trong BullMQ)
+const queueRedisConnection = new IORedis(config.REDIS_URL, {
     maxRetriesPerRequest: null,
 });
 
 // Khởi tạo Queue helper để worker có thể đẩy các job con (crawl-chapter) vào lại queue
 const crawlQueue = new Queue("crawl-tasks", {
-    connection: redisConnection,
+    connection: queueRedisConnection,
     defaultJobOptions: {
         removeOnComplete: true,
         removeOnFail: false,
@@ -52,8 +57,9 @@ const worker = new Worker(
         }
     },
     {
-        connection: redisConnection,
-        concurrency: 5, // Cào tối đa 5 chương truyện song song
+        connection: workerRedisConnection,
+        concurrency: 3, // Giảm xuống 3 để tránh quá tải CPU/RAM khi nén Sharp WebP
+        lockDuration: 60000, // Tăng lock duration lên 60 giây để tránh lỗi stalled job khi tải ảnh lâu
     }
 );
 
