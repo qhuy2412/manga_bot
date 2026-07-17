@@ -144,4 +144,16 @@ export class StoryController {
             next(error);
         }
     }
+    async updateLastChapterHash(req: Request, res: Response, next: NextFunction) {
+        try{
+            const storyId = req.params.id as string;
+            const hash = req.body.hash as string;
+            const result = await this.storyService.updateLastChapterHash(storyId,hash)
+            res.status(200).json({
+                data:result,
+            })
+        }catch(error:any){
+            next(error);
+        }
+    }
 }

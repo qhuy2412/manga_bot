@@ -3,6 +3,7 @@ import { BotConfigRepository } from "./botconfig.repository";
 import { BotConfigService } from "./botconfig.service";
 import { BotConfigController } from "./botconfig.controller";
 import { authMiddleware } from "../../shared/middlewares/auth.middleware";
+import { internalMiddleware } from "../../shared/middlewares/internal.middleware";
 
 const router = Router();
 
@@ -19,5 +20,8 @@ router.post("/", (req, res, next) => controller.createBotConfig(req, res, next))
 router.put("/:id", (req, res, next) => controller.updateBotConfig(req, res, next));
 router.delete("/:id", (req, res, next) => controller.deleteBotConfig(req, res, next));
 router.post("/test-selector", (req, res, next) => controller.testSelector(req, res, next));
+
+//Internal API
+router.get("/internal/:id",internalMiddleware,(req, res, next) => controller.getBotConfig(req, res, next));
 
 export default router;

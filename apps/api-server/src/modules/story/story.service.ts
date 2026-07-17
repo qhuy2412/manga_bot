@@ -4,6 +4,7 @@ import { BadRequestError, NotFoundError } from "../../shared/errors/AppError";
 import { BotConfig } from "../../models";
 import axios from "axios";
 import * as cheerio from "cheerio";
+import crypto from 'crypto';
 
 export class StoryService {
     constructor(private storyRepo: StoryRepository) { }
@@ -184,6 +185,14 @@ export class StoryService {
             }
             story.coverImage = imgUrl;
         }
+        return await this.storyRepo.update(id, story);
+    }
+    async updateLastChapterHash(id: string, hash: string) {
+        const story = await this.storyRepo.findById(id)
+        if (!story) {
+            throw new NotFoundError("Story not found")
+        }
+        story.latestChapterHash = hash;
         return await this.storyRepo.update(id, story);
     }
 }

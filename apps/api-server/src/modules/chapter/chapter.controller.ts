@@ -57,4 +57,13 @@ export class ChapterController {
             next(error);
         }
     }
+    async updateChapterContent(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const chapterId = req.params.id as string;
+            const chapter = await this.chapterService.updateChapterContent(chapterId, req.body);
+            res.status(200).json({ data: chapter });
+        } catch (error) {
+            next(error);
+        }
+    }
 }

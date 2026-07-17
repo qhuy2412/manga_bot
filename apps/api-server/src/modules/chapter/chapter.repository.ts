@@ -40,4 +40,7 @@ export class ChapterRepository {
     async delete(id: string) {
         return await this.chapterModel.findByIdAndDelete(id);
     }
+    async updateChapterContent(id: string, data: any) {
+        return await this.chapterModel.findByIdAndUpdate(id, data, { new: true });
+    }
 }

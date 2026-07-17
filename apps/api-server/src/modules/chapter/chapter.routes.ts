@@ -17,7 +17,7 @@ const controller = new ChapterController(service);
 router.get("/story/:storyId", (req, res, next) => controller.getChaptersByStoryId(req, res, next));
 router.get("/story/:storyId/index/:index", (req, res, next) => controller.getChapter(req, res, next));
 
-// Internal endpoint: Dành cho Crawler Worker đẩy chương truyện cào được lên (bảo mật bằng X-Internal-Token)
+//Internal API
 router.post("/internal/upsert", internalMiddleware, (req, res, next) => controller.upsertChapter(req, res, next));
-
+router.patch("/internal/:id", internalMiddleware, (req, res, next) => controller.updateChapterContent(req, res, next));
 export default router;

@@ -1,6 +1,6 @@
 import { ChapterRepository } from "./chapter.repository";
 import { StoryRepository } from "../story/story.repository";
-import { CreateChapterDTO } from "./chapter.dto";
+import { CreateChapterDTO, UpdateChapterDTO } from "./chapter.dto";
 import { NotFoundError } from "../../shared/errors/AppError";
 import crypto from "crypto";
 
@@ -53,5 +53,12 @@ export class ChapterService {
         }
         await this.chapterRepo.delete(id);
         return { message: "Chapter deleted successfully!" };
+    }
+    async updateChapterContent(id: string, data: Partial<UpdateChapterDTO>) {
+        const chapter = await this.chapterRepo.findById(id);
+        if (!chapter) {
+            throw new NotFoundError("Chapter not found!");
+        }
+        return await this.chapterRepo.updateChapterContent(id, data);
     }
 }
