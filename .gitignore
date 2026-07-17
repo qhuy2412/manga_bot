@@ -2,3 +2,5 @@ node_modules
 dist
 .env
 apps/api-server/scratch/
+context.md
+docs/
