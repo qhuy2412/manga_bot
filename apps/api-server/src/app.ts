@@ -13,6 +13,12 @@ import storyRoutes from "./modules/story/story.routes";
 import chapterRoutes from "./modules/chapter/chapter.routes";
 import crawlLogRoutes from "./modules/crawllog/crawllog.routes";
 
+// Import internal routers
+import storyInternalRoutes from "./modules/story/story.internal.routes";
+import chapterInternalRoutes from "./modules/chapter/chapter.internal.routes";
+import crawlLogInternalRoutes from "./modules/crawllog/crawllog.internal.routes";
+import botConfigInternalRoutes from "./modules/botconfig/botconfig.internal.routes";
+
 const app = express();
 
 // Middlewares toàn cục
@@ -28,6 +34,12 @@ app.use("/api/v1/genres", genreRoutes);
 app.use("/api/v1/stories", storyRoutes);
 app.use("/api/v1/chapters", chapterRoutes);
 app.use("/api/v1/crawl-logs", crawlLogRoutes);
+
+// Khởi tạo các routes API v1 Internal
+app.use("/api/v1/internal/stories", storyInternalRoutes);
+app.use("/api/v1/internal/chapters", chapterInternalRoutes);
+app.use("/api/v1/internal/crawl-logs", crawlLogInternalRoutes);
+app.use("/api/v1/internal/bot-configs", botConfigInternalRoutes);
 
 // Fallback cho các route không tồn tại
 app.use((req, res, next) => {
