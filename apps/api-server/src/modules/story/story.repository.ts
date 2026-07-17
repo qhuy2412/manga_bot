@@ -24,5 +24,8 @@ export class StoryRepository {
     async findAll() {
         return await this.storyModel.find();
     }
+    async find(query: any) {
+        return await this.storyModel.find(query);
+    }
 
 }

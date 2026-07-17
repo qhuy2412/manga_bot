@@ -23,4 +23,7 @@ router.delete("/:id", (req, res, next) => controller.deleteStory(req, res, next)
 // Thủ công kích hoạt cào dữ liệu truyện
 router.post("/:id/crawl", (req, res, next) => controller.triggerCrawl(req, res, next));
 
+// Internal API
+router.get("/internal/due", (req, res, next) => controller.findDueStories(req, res, next))
+
 export default router;

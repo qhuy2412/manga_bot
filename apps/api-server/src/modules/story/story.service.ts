@@ -135,4 +135,55 @@ export class StoryService {
     async findAll() {
         return await this.storyRepo.findAll();
     }
+
+    async findDueStories() {
+        return await this.storyRepo.find(
+            {
+                $or: [
+                    { nextCrawlAt: { $exists: false } },
+                    { nextCrawlAt: null },
+                    { nextCrawlAt: { $lt: new Date() } }
+                ]
+            }
+        )
+    }
+    async updateMetadata(id: string) {
+        const story = await this.storyRepo.findById(id);
+        if (!story) {
+            throw new NotFoundError("Story not found!");
+        }
+        const config = await BotConfig.findById(story.botConfigId);
+        if (!config) {
+            throw new NotFoundError("Bot configuration not found!");
+        }
+        const response = await axios.get(story.sourceUrl, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+            },
+            timeout: 5000
+        });
+        const $ = cheerio.load(response.data);
+        const crawledTitle = $(config.titleSelector).text().trim();
+        if (crawledTitle) {
+            story.title = crawledTitle;
+        }
+        const crawledAuthor = $(config.authorSelector).text().trim();
+        if (crawledAuthor) {
+            story.author = crawledAuthor;
+        }
+        const crawledDesc = $(config.descriptionSelector).text().trim();
+        if (crawledDesc) {
+            story.description = crawledDesc;
+        }
+        const crawledImg = $(".size-shop_catalog img").attr("src") || $(".border img").attr("src") || $("img[src*='cover']").attr("src");
+        if (crawledImg) {
+            let imgUrl = crawledImg;
+            if (imgUrl.startsWith("/")) {
+                const urlObj = new URL(story.sourceUrl);
+                imgUrl = `${urlObj.origin}${imgUrl}`;
+            }
+            story.coverImage = imgUrl;
+        }
+        return await this.storyRepo.update(id, story);
+    }
 }

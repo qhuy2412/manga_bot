@@ -123,4 +123,25 @@ export class StoryController {
             next(error);
         }
     }
+    async findDueStories(req: Request, res: Response, next: NextFunction) {
+        try{
+            const stories = await this.storyService.findDueStories();
+            res.status(200).json({
+                data: stories,
+            });
+        }catch(error:any){
+            next(error);
+        }
+    }
+    async updateMetadata(req: Request, res: Response, next: NextFunction) {
+        try{
+            const storyId = req.params.id as string;
+            const result = await this.storyService.updateMetadata(storyId);
+            res.status(200).json({
+                data: result,
+            });
+        }catch(error:any){
+            next(error);
+        }
+    }
 }
