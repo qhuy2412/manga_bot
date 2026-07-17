@@ -156,4 +156,14 @@ export class StoryController {
             next(error);
         }
     }
+    async findInternalById(req: Request, res: Response, next: NextFunction) {
+        try {
+            const story = await this.storyService.findInternalById(req.params.id as string);
+            res.status(200).json({
+                data: story,
+            });
+        } catch (error: any) {
+            next(error);
+        }
+    }
 }

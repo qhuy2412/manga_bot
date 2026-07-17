@@ -195,4 +195,11 @@ export class StoryService {
         story.latestChapterHash = hash;
         return await this.storyRepo.update(id, story);
     }
+    async findInternalById(id: string) {
+        const story = await this.storyRepo.findInternalById(id);
+        if (!story) {
+            throw new NotFoundError("Story not found!");
+        }
+        return story;
+    }
 }

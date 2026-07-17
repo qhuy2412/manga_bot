@@ -18,6 +18,9 @@ export class StoryRepository {
     async findById(id: string) {
         return await this.storyModel.findById(id);
     }
+    async findInternalById(id: string) {
+        return await this.storyModel.findById(id).populate("botConfigId");
+    }
     async findBySlug(slug: string) {
         return await this.storyModel.findOne({ slug });
     }
