@@ -2,7 +2,7 @@ import { Router } from "express";
 import { CrawlLogRepository } from "./crawllog.repository";
 import { CrawlLogService } from "./crawllog.service";
 import { CrawlLogController } from "./crawllog.controller";
-import { authMiddleware } from "../../shared/middlewares/auth.middleware";
+import { internalMiddleware } from "../../shared/middlewares/internal.middleware";
 
 const router = Router();
 
@@ -10,10 +10,10 @@ const repo = new CrawlLogRepository();
 const service = new CrawlLogService(repo);
 const controller = new CrawlLogController(service);
 
-// Tất cả endpoints crawl log yêu cầu quyền admin
-router.use(authMiddleware);
+// Apply internal token verification middleware to all routes in this file
+router.use(internalMiddleware);
 
-router.get("/", (req, res, next) => controller.getAllLogs(req, res, next));
-router.get("/story/:storyId", (req, res, next) => controller.getLogsByStoryId(req, res, next));
+// POST /api/v1/internal/crawl-logs
+router.post("/", (req, res, next) => controller.createLog(req, res, next));
 
 export default router;
