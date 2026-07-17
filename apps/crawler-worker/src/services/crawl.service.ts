@@ -13,16 +13,19 @@ const isCloudinaryConfigured =
 
 export class CrawlerService {
     /**
-     * Thực thi cào truyện theo storyId và jobType từ queue
+     * Bóc tách danh sách chương truyện và đẩy các job cào từng chương vào queue
      */
-    static async executeCrawlStory(payload: { storyId: string; jobType: "FULL_CRAWL" | "CRON_CRAWL" }) {
-        const { storyId, jobType } = payload;
+    static async discoverAndQueueChapters(
+        storyId: string,
+        jobType: "FULL_CRAWL" | "CRON_CRAWL",
+        queue: any
+    ) {
         const startTime = Date.now();
-        let crawledItemsCount = 0;
         let targetUrl = "";
         let botConfigId = "";
+        let queuedItemsCount = 0;
 
-        console.log(`[CrawlerService] Đang bắt đầu xử lý truyện ID: ${storyId} (${jobType})`);
+        console.log(`[CrawlerService] Đang quét truyện ID: ${storyId} (${jobType}) để phân phối chương...`);
 
         try {
             // 1. Lấy thông tin truyện từ API Server
@@ -44,11 +47,11 @@ export class CrawlerService {
             const parsedChapters = await this.parseChaptersFromPage(targetUrl, botConfig.chapterListSelector);
             console.log(`[CrawlerService] Tìm thấy tổng cộng ${parsedChapters.length} chương trên trang nguồn.`);
 
-            // Duyệt ngược danh sách chương (từ cũ nhất đến mới nhất)
-            const chaptersToCrawl = parsedChapters.reverse();
+            // Duyệt ngược danh sách chương (từ cũ nhất đến mới nhất) để đẩy vào queue theo đúng thứ tự
+            const chaptersToQueue = parsedChapters.reverse();
 
-            for (let index = 0; index < chaptersToCrawl.length; index++) {
-                const chapter = chaptersToCrawl[index];
+            for (let index = 0; index < chaptersToQueue.length; index++) {
+                const chapter = chaptersToQueue[index];
 
                 // Bỏ qua chương nếu cào thông minh (CRON_CRAWL) và đã tồn tại
                 if (jobType === "CRON_CRAWL" && existingUrls.has(chapter.url)) {
@@ -56,19 +59,27 @@ export class CrawlerService {
                     continue;
                 }
 
-                console.log(`\n--- [CrawlerService] Đang xử lý ${chapter.name}: ${chapter.url} ---`);
-
-                try {
-                    const success = await this.crawlChapter(storyId, chapter.name, index, chapter.url, botConfig.imageSelector);
-                    if (success) {
-                        crawledItemsCount++;
+                // Đẩy job con cào chương này vào Queue
+                await queue.add(
+                    "crawl-chapter",
+                    {
+                        storyId,
+                        chapterName: chapter.name,
+                        chapterIndex: index,
+                        chapterUrl: chapter.url,
+                        imageSelector: botConfig.imageSelector
+                    },
+                    {
+                        attempts: 3,
+                        backoff: { type: "exponential", delay: 5000 },
                     }
-                } catch (err: any) {
-                    console.error(`[CrawlerService] Lỗi khi cào chương ${chapter.name}:`, err.message);
-                }
+                );
+                queuedItemsCount++;
             }
 
-            // 4. Lưu log thành công
+            console.log(`[CrawlerService] Đã đẩy thành công ${queuedItemsCount} chương của truyện vào hàng đợi cào.`);
+
+            // 4. Lưu log thành công cho Dispatcher Job
             const executionTimeMs = Date.now() - startTime;
             await this.saveCrawlLog({
                 storyId,
@@ -76,14 +87,12 @@ export class CrawlerService {
                 jobType,
                 targetUrl,
                 status: "SUCCESS",
-                crawledItems: crawledItemsCount,
+                crawledItems: queuedItemsCount,
                 executionTimeMs
             });
 
-            console.log(`[CrawlerService] Hoàn tất quá trình quét truyện ID: ${storyId}`);
-
         } catch (error: any) {
-            console.error(`[CrawlerService] Quá trình cào thất bại toàn cục:`, error.message);
+            console.error(`[CrawlerService] Phân phối job cào truyện thất bại:`, error.message);
             const executionTimeMs = Date.now() - startTime;
 
             // Lưu log thất bại
@@ -94,11 +103,43 @@ export class CrawlerService {
                 targetUrl: targetUrl || "unknown",
                 status: "FAILED",
                 errorMessage: error.message,
-                crawledItems: crawledItemsCount,
+                crawledItems: queuedItemsCount,
                 executionTimeMs
             });
 
             throw error;
+        }
+    }
+
+    /**
+     * Thực thi cào một chương đơn lẻ (dành cho job crawl-chapter)
+     */
+    static async crawlSingleChapter(payload: {
+        storyId: string;
+        chapterName: string;
+        chapterIndex: number;
+        chapterUrl: string;
+        imageSelector: string;
+    }) {
+        const { storyId, chapterName, chapterIndex, chapterUrl, imageSelector } = payload;
+        console.log(`\n--- [CrawlerService] Bắt đầu cào chương ${chapterName}: ${chapterUrl} ---`);
+        
+        try {
+            const success = await this.crawlChapter(
+                storyId,
+                chapterName,
+                chapterIndex,
+                chapterUrl,
+                imageSelector
+            );
+            if (success) {
+                console.log(`[CrawlerService] Hoàn tất cào và đồng bộ chương ${chapterName}.`);
+            } else {
+                console.warn(`[CrawlerService] Cào chương ${chapterName} không tạo ra ảnh.`);
+            }
+        } catch (err: any) {
+            console.error(`[CrawlerService] Lỗi nghiêm trọng khi cào chương ${chapterName}:`, err.message);
+            throw err;
         }
     }
 

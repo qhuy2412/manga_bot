@@ -37,11 +37,14 @@ export class ChapterService {
         const imagesString = data.images.join(",");
         const hash = crypto.createHash("md5").update(imagesString).digest("hex");
 
-        // 4. Cập nhật thông tin chương mới nhất vào Story model
-        await this.storyRepo.update(data.storyId, {
-            lastChapterUrl: data.sourceUrl,
-            latestChapterHash: hash
-        });
+        // 4. Cập nhật thông tin chương mới nhất vào Story model nếu đây là chương có index lớn nhất
+        const highestChapter = await this.chapterRepo.findHighestIndex(data.storyId);
+        if (!highestChapter || data.chapterIndex >= highestChapter.chapterIndex) {
+            await this.storyRepo.update(data.storyId, {
+                lastChapterUrl: data.sourceUrl,
+                latestChapterHash: hash
+            });
+        }
 
         return chapter;
     }
