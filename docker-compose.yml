@@ -4,7 +4,7 @@ services:
     container_name: mangabot-mongo
     restart: always
     ports:
-      - "127.0.0.1:27017:27017"
+      - "27017:27017"
     volumes:
       - mongo_data:/data/db
 
@@ -13,7 +13,7 @@ services:
     container_name: mangabot-redis
     restart: always
     ports:
-      - "127.0.0.1:6379:6379"
+      - "6379:6379"
 
   api-server:
     build:
@@ -22,7 +22,7 @@ services:
     container_name: mangabot-api
     restart: always
     ports:
-      - "127.0.0.1:9999:9999"
+      - "9999:9999"
     environment:
       - PORT=${API_PORT}
       - MONGODB_URI=${MONGODB_URI}
@@ -62,7 +62,7 @@ services:
     container_name: mangabot-admin
     restart: always
     ports:
-      - "127.0.0.1:3001:3001"
+      - "3001:3001"
     depends_on:
       - api-server
 
@@ -75,7 +75,7 @@ services:
     container_name: mangabot-user
     restart: always
     ports:
-      - "127.0.0.1:3000:3000"
+      - "3000:3000"
     depends_on:
       - api-server
 
