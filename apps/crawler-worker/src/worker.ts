@@ -74,3 +74,27 @@ worker.on("failed", (job, err) => {
 worker.on("error", (err) => {
     console.error(`[Worker] Lỗi kết nối Redis trong hệ thống Queue:`, err.message);
 });
+
+// ============================================================
+// Graceful Shutdown: Đợi các job đang xử lý hoàn tất trước khi thoát
+// ============================================================
+const gracefulShutdown = async (signal: string) => {
+    console.log(`\n[Worker] Nhận tín hiệu ${signal}. Đang đợi các job hiện tại hoàn tất...`);
+
+    // worker.close() sẽ:
+    // 1. Ngừng nhận job mới từ queue
+    // 2. Đợi các job đang active (tối đa concurrency=3) xử lý xong
+    // 3. Sau đó mới thoát
+    await worker.close();
+    console.log("[Worker] Tất cả job đang chạy đã hoàn tất. Đóng kết nối Redis...");
+
+    await crawlQueue.close();
+    workerRedisConnection.disconnect();
+    queueRedisConnection.disconnect();
+
+    console.log("[Worker] Đã tắt sạch sẽ. Goodbye!");
+    process.exit(0);
+};
+
+process.on("SIGINT", () => gracefulShutdown("SIGINT"));   // Ctrl+C
+process.on("SIGTERM", () => gracefulShutdown("SIGTERM")); // Docker stop / PM2 stop
