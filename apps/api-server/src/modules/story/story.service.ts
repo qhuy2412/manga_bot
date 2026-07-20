@@ -214,7 +214,7 @@ export class StoryService {
         story.crawlStatus.state = "stopping";
         await this.storyRepo.update(id, story);
 
-        // Hủy tất cả các job đang chờ cào của truyện này trong queue
+        // 2. Hủy tất cả các job đang chờ cào của truyện này trong queue
         const jobs = await crawlQueue.getJobs(["waiting", "delayed"]);
         let removedCount = 0;
         for (const job of jobs) {
@@ -223,6 +223,12 @@ export class StoryService {
                 removedCount++;
             }
         }
+
+        // 3. Đưa trạng thái về idle ngay lập tức để UI khôi phục nút Play
+        story.crawlStatus.state = "idle";
+        story.crawlStatus.currentChapterName = "Đã dừng cào";
+        await this.storyRepo.update(id, story);
+
         console.log(`[StoryService] Đã dừng cào truyện ${story.title} và gỡ ${removedCount} jobs khỏi Queue.`);
         return { message: "Stopping request sent to workers. Queued jobs removed." };
     }

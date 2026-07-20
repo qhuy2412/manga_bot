@@ -294,6 +294,15 @@ export class CrawlerService {
         const originUrl = new URL(chapterUrl).origin;
 
         for (let i = 0; i < rawImgUrls.length; i++) {
+            // Kiểm tra tín hiệu dừng cào cứ sau 3 trang ảnh
+            if (i > 0 && i % 3 === 0) {
+                const checkStory = await this.fetchStoryDetails(storyId);
+                if (checkStory.crawlStatus?.state === "stopping" || checkStory.crawlStatus?.state === "idle") {
+                    console.log(`[CrawlerService] Đã ngắt tiến trình cào chương ${chapterName} do có lệnh dừng.`);
+                    return false;
+                }
+            }
+
             const imgUrl = rawImgUrls[i];
             const processedUrl = await this.processAndUploadImage(imgUrl, originUrl, storyId, i + 1, rawImgUrls.length);
             if (processedUrl) {
