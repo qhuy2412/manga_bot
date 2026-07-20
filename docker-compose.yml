@@ -26,13 +26,13 @@ services:
     ports:
       - "127.0.0.1:9999:9999"
     environment:
-      - PORT=9999
-      - MONGODB_URI=mongodb://mongodb:27017/MangaBot
-      - REDIS_URL=redis://redis:6379
-      - JWT_SECRET=${JWT_SECRET:-your_super_secret_jwt_key}
-      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-worker-token}
-      - CRAWL_SOURCE_NAME=${CRAWL_SOURCE_NAME:-DiLib}
-      - CRAWL_SOURCE_DOMAIN=${CRAWL_SOURCE_DOMAIN:-dilib.vn}
+      - PORT=${API_PORT}
+      - MONGODB_URI=${MONGODB_URI}
+      - REDIS_URL=${REDIS_URL}
+      - JWT_SECRET=${JWT_SECRET}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN}
+      - CRAWL_SOURCE_NAME=${CRAWL_SOURCE_NAME}
+      - CRAWL_SOURCE_DOMAIN=${CRAWL_SOURCE_DOMAIN}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       - mongodb
@@ -45,9 +45,9 @@ services:
     container_name: mangabot-worker
     restart: always
     environment:
-      - REDIS_URL=redis://redis:6379
-      - API_SERVER_URL=http://api-server:9999/api/v1
-      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-worker-token}
+      - REDIS_URL=${REDIS_URL}
+      - API_SERVER_URL=${INTERNAL_API_SERVER_URL}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
@@ -60,7 +60,7 @@ services:
       context: ./apps/admin-dashboard
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:9999/api/v1}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: mangabot-admin
     restart: always
     ports:
@@ -73,7 +73,7 @@ services:
       context: ./apps/user-portal
       dockerfile: Dockerfile
       args:
-        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:9999/api/v1}
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     container_name: mangabot-user
     restart: always
     ports:
