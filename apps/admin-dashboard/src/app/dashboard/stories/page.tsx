@@ -364,7 +364,19 @@ export default function StoriesPage() {
                 router.replace("/dashboard/stories");
             }, 1500);
         } catch (err: any) {
-            const errMsg = err.response?.data?.error?.message || "Lỗi lưu thông tin truyện. Vui lòng kiểm tra lại!";
+            let errMsg = err.response?.data?.error?.message || "Lỗi lưu thông tin truyện. Vui lòng kiểm tra lại!";
+            const details = err.response?.data?.error?.details;
+            if (details) {
+                const errorFields = Object.keys(details)
+                    .filter(k => k !== "_errors")
+                    .map(field => {
+                        const fieldErrors = details[field]._errors || [];
+                        return `${field}: ${fieldErrors.join(", ")}`;
+                    });
+                if (errorFields.length > 0) {
+                    errMsg += ` (${errorFields.join(" | ")})`;
+                }
+            }
             setFormError(errMsg);
         }
     };
