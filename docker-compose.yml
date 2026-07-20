@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  mongodb:
+    image: mongo:6.0
+    container_name: mangabot-mongo
+    restart: always
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    container_name: mangabot-redis
+    restart: always
+    ports:
+      - "127.0.0.1:6379:6379"
+
+  api-server:
+    build:
+      context: ./apps/api-server
+      dockerfile: Dockerfile
+    container_name: mangabot-api
+    restart: always
+    ports:
+      - "127.0.0.1:9999:9999"
+    environment:
+      - PORT=9999
+      - MONGODB_URI=mongodb://mongodb:27017/MangaBot
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET:-your_super_secret_jwt_key}
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-worker-token}
+      - CRAWL_SOURCE_NAME=${CRAWL_SOURCE_NAME:-DiLib}
+      - CRAWL_SOURCE_DOMAIN=${CRAWL_SOURCE_DOMAIN:-dilib.vn}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
+    depends_on:
+      - mongodb
+      - redis
+
+  crawler-worker:
+    build:
+      context: ./apps/crawler-worker
+      dockerfile: Dockerfile
+    container_name: mangabot-worker
+    restart: always
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - API_SERVER_URL=http://api-server:9999/api/v1
+      - INTERNAL_TOKEN=${INTERNAL_TOKEN:-worker-token}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+    depends_on:
+      - redis
+      - api-server
+
+  admin-dashboard:
+    build:
+      context: ./apps/admin-dashboard
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:9999/api/v1}
+    container_name: mangabot-admin
+    restart: always
+    ports:
+      - "127.0.0.1:3001:3001"
+    depends_on:
+      - api-server
+
+  user-portal:
+    build:
+      context: ./apps/user-portal
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:9999/api/v1}
+    container_name: mangabot-user
+    restart: always
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - api-server
+
+volumes:
+  mongo_data:
