@@ -26,13 +26,14 @@ export const getNextCrawlTime = (cronSchedule: string): Date => {
 export const checkAndEnqueueStories = async (): Promise<void> => {
     try {
         const now = new Date();
-        
+
         // Lấy danh sách các truyện cần cập nhật:
         // - isAutoUpdate = true
         // - nextCrawlTime <= now
         const storiesToCrawl = await Story.find({
             isAutoUpdate: true,
-            nextCrawlTime: { $lte: now }
+            nextCrawlTime: { $lte: now },
+            status: "Ongoing"
         });
 
         if (storiesToCrawl.length === 0) {
@@ -44,13 +45,20 @@ export const checkAndEnqueueStories = async (): Promise<void> => {
         for (const story of storiesToCrawl) {
             try {
                 // 1. Đẩy job cào (CRON_CRAWL) vào queue
-                await addCrawlJob(story._id.toString(), "CRON_CRAWL");
-                
+                const job = await addCrawlJob(story._id.toString(), "CRON_CRAWL");
+
                 // 2. Tính toán mốc thời gian tiếp theo
                 const nextTime = getNextCrawlTime(story.cronSchedule);
-                
-                // 3. Cập nhật mốc thời gian mới
+
+                // 3. Cập nhật mốc thời gian mới và khởi tạo trạng thái cào
                 story.nextCrawlTime = nextTime;
+                story.crawlStatus = {
+                    state: "crawling",
+                    current: 0,
+                    total: 0,
+                    currentChapterName: "Đang xếp hàng cào...",
+                    jobId: job.id || ""
+                };
                 await story.save();
 
                 logger.info("SCHEDULER", `Enqueued story '${story.title}' for crawl. Next crawl at: ${nextTime.toISOString()}`);
@@ -74,7 +82,7 @@ export const startCrawlScheduler = (intervalMs: number = 60000): void => {
     }
 
     logger.info("SCHEDULER", `Starting crawl scheduler ticker (Interval: ${intervalMs / 1000}s)...`);
-    
+
     // Quét lập tức lúc start
     checkAndEnqueueStories();
 

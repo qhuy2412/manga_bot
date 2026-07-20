@@ -60,6 +60,7 @@ export class CrawlerService {
 
             // Cập nhật tổng số chương cần cào trong DB để làm tổng tiến độ
             await this.updateCrawlProgress(storyId, {
+                state: "crawling",
                 total: chaptersToQueueFiltered.length,
                 current: 0,
                 currentChapterName: "Đang xếp lịch cào..."
@@ -145,6 +146,12 @@ export class CrawlerService {
                 await this.updateCrawlProgress(storyId, { state: "idle" });
                 throw new Error("Crawl task cancelled by admin");
             }
+
+            // Cập nhật trạng thái chi tiết trước khi cào
+            await this.updateCrawlProgress(storyId, {
+                state: "crawling",
+                currentChapterName: `Đang tải ${chapterName}...`
+            });
 
             const success = await this.crawlChapter(
                 storyId,
@@ -280,6 +287,12 @@ export class CrawlerService {
             console.warn(`[CrawlerService] Không tìm thấy ảnh nào cho chương ${chapterName}.`);
             return false;
         }
+
+        // Cập nhật trạng thái chi tiết khi bắt đầu nén & upload ảnh
+        await this.updateCrawlProgress(storyId, {
+            state: "crawling",
+            currentChapterName: `Đang tối ưu & upload ${chapterName}...`
+        });
 
         console.log(`[CrawlerService] Bắt đầu tải và tối ưu ${rawImgUrls.length} ảnh trang...`);
         const processedImgUrls: string[] = [];
