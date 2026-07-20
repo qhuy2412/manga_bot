@@ -118,7 +118,7 @@ const vietnameseLocale = {
     ]
 };
 
-export default function StoriesPage() {
+function StoriesContent() {
     const searchParams = useSearchParams();
     const router = useRouter();
     const [stories, setStories] = useState<Story[]>([]);
@@ -921,3 +921,19 @@ export default function StoriesPage() {
         </div>
     );
 }
+
+export default function StoriesPage() {
+    return (
+        <React.Suspense fallback={
+            <div className="flex-1 flex items-center justify-center min-h-[400px]">
+                <div className="relative w-12 h-12">
+                    <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-violet-500/20" />
+                    <div className="absolute top-0 left-0 w-full h-full rounded-full border-4 border-t-violet-500 animate-spin" />
+                </div>
+            </div>
+        }>
+            <StoriesContent />
+        </React.Suspense>
+    );
+}
+
