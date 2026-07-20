@@ -11,7 +11,8 @@ import {
     Check,
     AlertCircle,
     X,
-    Eye
+    Eye,
+    Wand2
 } from "lucide-react";
 
 interface BotConfig {
@@ -56,6 +57,40 @@ export default function BotConfigsPage() {
     const [testResult, setTestResult] = useState<TestResult | null>(null);
     const [testLoading, setTestLoading] = useState(false);
     const [testError, setTestError] = useState("");
+
+    // AI Auto-Detect states
+    const [aiUrl, setAiUrl] = useState("");
+    const [aiLoading, setAiLoading] = useState(false);
+    const [aiError, setAiError] = useState("");
+    const [aiSuccess, setAiSuccess] = useState("");
+
+    const handleAIDetect = async () => {
+        if (!aiUrl) {
+            setAiError("Vui lòng nhập URL truyện mẫu!");
+            return;
+        }
+        setAiLoading(true);
+        setAiError("");
+        setAiSuccess("");
+
+        try {
+            const res = await api.post("/bot-configs/ai-detect-selectors", { url: aiUrl });
+            const { selectors, preview } = res.data.data;
+
+            if (selectors.titleSelector) setTitleSelector(selectors.titleSelector);
+            if (selectors.authorSelector) setAuthorSelector(selectors.authorSelector);
+            if (selectors.descriptionSelector) setDescriptionSelector(selectors.descriptionSelector);
+            if (selectors.chapterListSelector) setChapterListSelector(selectors.chapterListSelector);
+            if (selectors.imageSelector) setImageSelector(selectors.imageSelector);
+
+            setAiSuccess(`AI đã dò tìm thành công! Bóc tách mẫu: "${preview.title}" (${preview.chaptersCount} chap)`);
+        } catch (err: any) {
+            const msg = err.response?.data?.error?.message || err.message || "Lỗi khi chạy AI phân tích.";
+            setAiError(msg);
+        } finally {
+            setAiLoading(false);
+        }
+    };
 
     const fetchConfigs = async () => {
         try {
@@ -313,6 +348,43 @@ export default function BotConfigsPage() {
                                     <span>{formSuccess}</span>
                                 </div>
                             )}
+                            {/* AI Auto-Detect Box */}
+                            <div className="bg-gradient-to-r from-violet-950/40 to-indigo-950/40 border border-violet-500/30 rounded-xl p-4 space-y-3">
+                                <div className="flex items-center space-x-2 text-violet-300 font-semibold text-xs uppercase tracking-wider">
+                                    <Wand2 className="w-4 h-4 text-violet-400 animate-pulse" />
+                                    <span>AI Tự động dò Selector từ URL mẫu</span>
+                                </div>
+                                <div className="flex gap-2">
+                                    <input
+                                        type="url"
+                                        value={aiUrl}
+                                        onChange={(e) => setAiUrl(e.target.value)}
+                                        placeholder="Dán URL trang truyện mẫu (VD: https://dilib.vn/dao-hai-tac...)"
+                                        className="flex-1 bg-[#11131c] text-white px-3.5 py-2 rounded-xl border border-slate-800 focus:border-violet-500 outline-none text-xs placeholder-slate-600"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={handleAIDetect}
+                                        disabled={aiLoading}
+                                        className="flex items-center space-x-1.5 bg-violet-600 hover:bg-violet-500 text-white px-4 py-2 rounded-xl text-xs font-semibold shrink-0 transition-all disabled:opacity-50 shadow-md shadow-violet-600/20"
+                                    >
+                                        <Wand2 className={`w-3.5 h-3.5 ${aiLoading ? "animate-spin" : ""}`} />
+                                        <span>{aiLoading ? "AI đang dò..." : "AI Dò tự động"}</span>
+                                    </button>
+                                </div>
+                                {aiError && (
+                                    <p className="text-xs text-red-400 flex items-center space-x-1 mt-1">
+                                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                                        <span>{aiError}</span>
+                                    </p>
+                                )}
+                                {aiSuccess && (
+                                    <p className="text-xs text-emerald-400 flex items-center space-x-1 mt-1">
+                                        <Check className="w-3.5 h-3.5 shrink-0" />
+                                        <span>{aiSuccess}</span>
+                                    </p>
+                                )}
+                            </div>
 
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div className="space-y-2 sm:col-span-2">

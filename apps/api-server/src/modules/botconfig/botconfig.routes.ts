@@ -19,5 +19,6 @@ router.post("/", (req, res, next) => controller.createBotConfig(req, res, next))
 router.put("/:id", (req, res, next) => controller.updateBotConfig(req, res, next));
 router.delete("/:id", (req, res, next) => controller.deleteBotConfig(req, res, next));
 router.post("/test-selector", (req, res, next) => controller.testSelector(req, res, next));
+router.post("/ai-detect-selectors", (req, res, next) => controller.aiDetectSelectors(req, res, next));
 
 export default router;

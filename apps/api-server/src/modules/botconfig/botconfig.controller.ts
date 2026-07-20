@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { BotConfigService } from "./botconfig.service";
 import { CreateBotConfigSchema, UpdateBotConfigSchema, TestSelectorSchema } from "./botconfig.dto";
+import { AIDetectorService } from "./ai-detector.service";
 
 export class BotConfigController {
     private botConfigService: BotConfigService;
@@ -103,6 +104,22 @@ export class BotConfigController {
             res.status(200).json({
                 data: result
             })
+        } catch (error) {
+            next(error);
+        }
+    }
+
+    async aiDetectSelectors(req: Request, res: Response, next: NextFunction): Promise<void> {
+        try {
+            const { url } = req.body;
+            if (!url || typeof url !== "string") {
+                res.status(400).json({ error: { message: "Vui lòng nhập URL trang truyện mẫu hợp lệ!" } });
+                return;
+            }
+            const result = await AIDetectorService.detectSelectors(url);
+            res.status(200).json({
+                data: result
+            });
         } catch (error) {
             next(error);
         }

@@ -8,6 +8,7 @@ const ConfigSchema = z.object({
   INTERNAL_TOKEN: z.string().min(8).default("your_super_secret_internal_worker_key"),
   CRAWL_SOURCE_NAME: z.string().default("DiLib"),
   CRAWL_SOURCE_DOMAIN: z.string().default("dilib.vn"),
+  GEMINI_API_KEY: z.string().optional().default(""),
 });
 
 export const config = ConfigSchema.parse(process.env);
