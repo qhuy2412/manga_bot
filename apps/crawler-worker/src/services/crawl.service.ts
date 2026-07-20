@@ -38,10 +38,8 @@ export class CrawlerService {
             }
             botConfigId = botConfig._id;
 
-            // 2. Lấy danh sách chương đã tồn tại nếu là CRON_CRAWL
-            const existingUrls = jobType === "CRON_CRAWL"
-                ? await this.getExistingChapterUrls(storyId)
-                : new Set<string>();
+            // 2. Lấy danh sách chương đã tồn tại trong DB để bỏ qua (tránh cào lại từ đầu)
+            const existingUrls = await this.getExistingChapterUrls(storyId);
 
             // 3. Tải và bóc tách danh sách chương từ trang nguồn
             const parsedChapters = await this.parseChaptersFromPage(targetUrl, botConfig.chapterListSelector);
@@ -52,10 +50,7 @@ export class CrawlerService {
             const chaptersWithIndex = chaptersToQueue.map((c, i) => ({ ...c, absoluteIndex: i }));
 
             const chaptersToQueueFiltered = chaptersWithIndex.filter(chapter => {
-                if (jobType === "CRON_CRAWL" && existingUrls.has(chapter.url)) {
-                    return false;
-                }
-                return true;
+                return !existingUrls.has(chapter.url);
             });
 
             // Cập nhật tổng số chương cần cào trong DB để làm tổng tiến độ
