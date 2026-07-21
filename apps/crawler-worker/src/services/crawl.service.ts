@@ -42,16 +42,40 @@ export class CrawlerService {
             const existingUrls = await this.getExistingChapterUrls(storyId);
 
             // 3. Tải và bóc tách danh sách chương từ trang nguồn
+            // Trang nguồn liệt kê chương từ mới nhất (index 0) đến cũ nhất
             const parsedChapters = await this.parseChaptersFromPage(targetUrl, botConfig.chapterListSelector);
             console.log(`[CrawlerService] Tìm thấy tổng cộng ${parsedChapters.length} chương trên trang nguồn.`);
 
-            // Duyệt ngược danh sách chương (từ cũ nhất đến mới nhất) để đẩy vào queue theo đúng thứ tự
-            const chaptersToQueue = parsedChapters.reverse();
-            const chaptersWithIndex = chaptersToQueue.map((c, i) => ({ ...c, absoluteIndex: i }));
+            // Đánh số absoluteIndex từ cũ đến mới (0 = chương đầu tiên)
+            const totalParsed = parsedChapters.length;
+            const chaptersWithIndex = parsedChapters.map((c, i) => ({
+                ...c,
+                absoluteIndex: totalParsed - 1 - i
+            }));
 
-            const chaptersToQueueFiltered = chaptersWithIndex.filter(chapter => {
-                return !existingUrls.has(chapter.url);
-            });
+            let chaptersToQueueFiltered: typeof chaptersWithIndex = [];
+
+            if (jobType === "CRON_CRAWL") {
+                // Đối với CRON_CRAWL (quét tự động):
+                // Duyệt từ mới nhất (đầu danh sách) về cũ nhất.
+                // Khi gặp chương ĐÃ CÓ trong DB, DỪNG LẠI NGAY (break) vì các chương sau đã được cào trước đó.
+                const newChapters: typeof chaptersWithIndex = [];
+                for (const chapter of chaptersWithIndex) {
+                    if (existingUrls.has(chapter.url)) {
+                        console.log(`[CrawlerService] CRON_CRAWL: Gặp chương đã tồn tại (${chapter.name}). Dừng enqueue.`);
+                        break;
+                    }
+                    newChapters.push(chapter);
+                }
+                // Đảo ngược lại để enqueue theo thứ tự thời gian (chương cũ hơn cào trước, mới hơn cào sau)
+                chaptersToQueueFiltered = newChapters.reverse();
+            } else {
+                // Đối với FULL_CRAWL: Lọc tất cả các chương chưa có trong DB theo thứ tự từ cũ đến mới
+                chaptersToQueueFiltered = chaptersWithIndex
+                    .slice()
+                    .reverse()
+                    .filter(chapter => !existingUrls.has(chapter.url));
+            }
 
             // Cập nhật tổng số chương cần cào trong DB để làm tổng tiến độ
             await this.updateCrawlProgress(storyId, {
@@ -60,6 +84,8 @@ export class CrawlerService {
                 current: 0,
                 currentChapterName: "Đang xếp lịch cào..."
             });
+
+            const priority = jobType === "CRON_CRAWL" ? 1 : 5;
 
             for (let index = 0; index < chaptersToQueueFiltered.length; index++) {
                 const chapter = chaptersToQueueFiltered[index];
@@ -75,6 +101,7 @@ export class CrawlerService {
                         imageSelector: botConfig.imageSelector
                     },
                     {
+                        priority,
                         attempts: 3,
                         backoff: { type: "exponential", delay: 5000 },
                     }
