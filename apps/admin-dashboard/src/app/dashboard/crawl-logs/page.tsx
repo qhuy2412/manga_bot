@@ -24,6 +24,7 @@ interface CrawlLogItem {
     botConfigId: { _id: string; layoutName: string } | null;
     jobType: string;
     targetUrl: string;
+    chapterName?: string;
     status: "SUCCESS" | "FAILED";
     errorMessage?: string;
     crawledItems: number;
@@ -175,7 +176,7 @@ export default function CrawlLogsPage() {
                                 <th className="px-6 py-3.5">Truyện</th>
                                 <th className="px-6 py-3.5 text-center">Trạng thái</th>
                                 <th className="px-6 py-3.5 text-center">Kiểu chạy</th>
-                                <th className="px-6 py-3.5 text-center">Ảnh đã cào</th>
+                                <th className="px-6 py-3.5 text-center">Số lượng items</th>
                                 <th className="px-6 py-3.5 text-center">Thời gian chạy</th>
                                 <th className="px-6 py-3.5 text-center">Thời gian tạo</th>
                                 <th className="px-6 py-3.5 text-right">Chi tiết</th>
@@ -202,6 +203,11 @@ export default function CrawlLogsPage() {
                                                 <span className="font-bold text-slate-200 block max-w-[220px] truncate leading-tight">
                                                     {log.storyId ? log.storyId.title : "Truyện đã bị xóa"}
                                                 </span>
+                                                {log.chapterName && (
+                                                    <span className="text-xs text-indigo-400 font-semibold block">
+                                                        {log.chapterName}
+                                                    </span>
+                                                )}
                                                 <span className="text-[10px] text-slate-500 flex items-center space-x-1">
                                                     <Clock className="w-3 h-3" />
                                                     <span>{log.botConfigId ? log.botConfigId.layoutName : "Nguồn đã xóa"}</span>
@@ -222,7 +228,13 @@ export default function CrawlLogsPage() {
                                             )}
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className="text-[10px] bg-slate-850 text-slate-350 px-2.5 py-0.5 rounded font-bold uppercase tracking-wider inline-block">
+                                            <span className={`text-[10px] px-2.5 py-0.5 rounded font-bold uppercase tracking-wider inline-block ${
+                                                log.jobType === "CRON_CRAWL" 
+                                                    ? "bg-cyan-500/10 text-cyan-400 border border-cyan-500/20"
+                                                    : log.jobType === "CHAPTER_CRAWL"
+                                                    ? "bg-amber-500/10 text-amber-400 border border-amber-500/20"
+                                                    : "bg-purple-500/10 text-purple-400 border border-purple-500/20"
+                                            }`}>
                                                 {log.jobType}
                                             </span>
                                         </td>

@@ -158,6 +158,7 @@ export class CrawlerService {
     }) {
         const { storyId, chapterName, chapterIndex, chapterUrl, imageSelector } = payload;
         console.log(`\n--- [CrawlerService] Bắt đầu cào chương ${chapterName}: ${chapterUrl} ---`);
+        const startTime = Date.now();
         
         try {
             // Kiểm tra trạng thái dừng cào từ Admin
@@ -166,6 +167,19 @@ export class CrawlerService {
                 console.log(`[CrawlerService] Hủy bỏ cào chương ${chapterName} do nhận lệnh dừng cào từ Admin.`);
                 // Reset trạng thái về idle
                 await this.updateCrawlProgress(storyId, { state: "idle" });
+
+                await this.saveCrawlLog({
+                    storyId,
+                    botConfigId: story.botConfigId?._id || story.botConfigId,
+                    jobType: "CHAPTER_CRAWL",
+                    targetUrl: chapterUrl,
+                    chapterName,
+                    status: "FAILED",
+                    errorMessage: "Crawl task cancelled by admin",
+                    crawledItems: 0,
+                    executionTimeMs: Date.now() - startTime
+                });
+
                 throw new Error("Crawl task cancelled by admin");
             }
 
@@ -182,15 +196,54 @@ export class CrawlerService {
                 chapterUrl,
                 imageSelector
             );
+
+            const executionTimeMs = Date.now() - startTime;
+
             if (success) {
                 console.log(`[CrawlerService] Hoàn tất cào và đồng bộ chương ${chapterName}.`);
                 await this.incrementCrawlProgress(storyId, chapterName);
+
+                await this.saveCrawlLog({
+                    storyId,
+                    botConfigId: story.botConfigId?._id || story.botConfigId,
+                    jobType: "CHAPTER_CRAWL",
+                    targetUrl: chapterUrl,
+                    chapterName,
+                    status: "SUCCESS",
+                    crawledItems: 1,
+                    executionTimeMs
+                });
             } else {
                 console.warn(`[CrawlerService] Cào chương ${chapterName} không tạo ra ảnh.`);
                 await this.incrementCrawlProgress(storyId, chapterName);
+
+                await this.saveCrawlLog({
+                    storyId,
+                    botConfigId: story.botConfigId?._id || story.botConfigId,
+                    jobType: "CHAPTER_CRAWL",
+                    targetUrl: chapterUrl,
+                    chapterName,
+                    status: "FAILED",
+                    errorMessage: "Cào chương không tạo ra ảnh nào",
+                    crawledItems: 0,
+                    executionTimeMs
+                });
             }
         } catch (err: any) {
             console.error(`[CrawlerService] Lỗi nghiêm trọng khi cào chương ${chapterName}:`, err.message);
+            const executionTimeMs = Date.now() - startTime;
+
+            await this.saveCrawlLog({
+                storyId,
+                jobType: "CHAPTER_CRAWL",
+                targetUrl: chapterUrl,
+                chapterName,
+                status: "FAILED",
+                errorMessage: err.message,
+                crawledItems: 0,
+                executionTimeMs
+            });
+
             throw err;
         }
     }
@@ -407,6 +460,7 @@ export class CrawlerService {
         botConfigId?: string;
         jobType: string;
         targetUrl: string;
+        chapterName?: string;
         status: "SUCCESS" | "FAILED";
         crawledItems: number;
         executionTimeMs: number;
