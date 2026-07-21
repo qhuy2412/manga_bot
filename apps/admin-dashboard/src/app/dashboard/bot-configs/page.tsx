@@ -83,7 +83,7 @@ export default function BotConfigsPage() {
             if (selectors.chapterListSelector) setChapterListSelector(selectors.chapterListSelector);
             if (selectors.imageSelector) setImageSelector(selectors.imageSelector);
 
-            setAiSuccess(`AI đã dò tìm thành công! Bóc tách mẫu: "${preview.title}" (${preview.chaptersCount} chap)`);
+            setAiSuccess(`AI đã dò tìm thành công cả 2 pha! Bóc tách mẫu: "${preview.title}" (${preview.chaptersCount} chap, ${preview.imagesCount || 0} ảnh/chap)`);
         } catch (err: any) {
             const msg = err.response?.data?.error?.message || err.message || "Lỗi khi chạy AI phân tích.";
             setAiError(msg);

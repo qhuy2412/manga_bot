@@ -28,16 +28,16 @@ export class AIDetectorService {
         // Lấy HTML body sạch
         let cleanedHtml = $("body").html() || $.html();
 
-        // Rút gọn bớt dung lượng nếu vượt quá 60KB
-        if (cleanedHtml.length > 60000) {
-            cleanedHtml = cleanedHtml.substring(0, 60000);
+        // Rút gọn bớt dung lượng nếu vượt quá 40KB
+        if (cleanedHtml.length > 40000) {
+            cleanedHtml = cleanedHtml.substring(0, 40000);
         }
 
         return { cleanedHtml, rawHtml };
     }
 
     /**
-     * Dùng Gemini AI tự động dò 5 CSS Selectors từ URL trang truyện mẫu
+     * Dùng 1 PROMPT DUY NHẤT cho Gemini AI để tự động dò 5 CSS Selectors
      */
     static async detectSelectors(targetUrl: string) {
         const apiKey = config.GEMINI_API_KEY || process.env.GEMINI_API_KEY;
@@ -49,26 +49,62 @@ export class AIDetectorService {
             );
         }
 
-        const { cleanedHtml, rawHtml } = await this.fetchAndCleanDOM(targetUrl);
+        // 1. Tải và làm sạch DOM trang chi tiết truyện
+        const { cleanedHtml: storyCleanedHtml, rawHtml: storyRawHtml } = await this.fetchAndCleanDOM(targetUrl);
+        const $story = cheerio.load(storyRawHtml);
 
+        // 2. Tìm nhanh link 1 chương mẫu từ trang truyện để tải ngầm trước khi gửi AI
+        let chapterCleanedHtml = "";
+        let chapterRawHtml = "";
+
+        const candidateLinks: string[] = [];
+        $story("a[href]").each((_, el) => {
+            const href = $story(el).attr("href");
+            const text = $story(el).text().toLowerCase();
+            if (href && (href.includes("chap") || href.includes("chuong") || href.includes("read") || /\d+/.test(text))) {
+                candidateLinks.push(href);
+            }
+        });
+
+        if (candidateLinks.length > 0) {
+            let sampleHref = candidateLinks[0];
+            let sampleUrl = sampleHref.trim();
+            if (sampleUrl.startsWith("//")) sampleUrl = `https:${sampleUrl}`;
+            else if (sampleUrl.startsWith("/")) {
+                const urlObj = new URL(targetUrl);
+                sampleUrl = `${urlObj.origin}${sampleUrl}`;
+            }
+
+            try {
+                const chapRes = await this.fetchAndCleanDOM(sampleUrl);
+                chapterCleanedHtml = chapRes.cleanedHtml;
+                chapterRawHtml = chapRes.rawHtml;
+            } catch (err: any) {
+                console.warn("[AIDetectorService] Không thể tải trước trang đọc chương mẫu:", err.message);
+            }
+        }
+
+        // 3. Gộp 2 cây DOM thành 1 PROMPT DUY NHẤT cho AI phân tích 1 lần duy nhất
         const prompt = `Bạn là một chuyên gia Web Scraping & Cheerio Selector.
-Dưới đây là một đoạn cây HTML đã làm sạch của một trang chi tiết truyện tranh:
+Dưới đây là cây HTML của một website truyện tranh:
 
-==================== HTML DOM START ====================
-${cleanedHtml}
-==================== HTML DOM END ====================
+==================== 1. TRANG CHI TIẾT TRUYỆN DOM ====================
+${storyCleanedHtml}
 
-Nhiệm vụ của bạn: Hãy phân tích cấu trúc DOM trên và tìm ra 5 CSS Selectors (dành cho Cheerio/jQuery) tối ưu nhất:
-1. titleSelector: Selector trích xuất Tiêu đề/Tên bộ truyện.
-2. authorSelector: Selector trích xuất Tên tác giả.
-3. descriptionSelector: Selector trích xuất Nội dung mô tả/Tóm tắt truyện.
-4. chapterListSelector: Selector trích xuất các thẻ <a> liên kết đến từng chương truyện trong danh sách chương.
-5. imageSelector: Selector trích xuất các thẻ <img> chứa ảnh trang truyện trong trang đọc chương.
+${chapterCleanedHtml ? `==================== 2. TRANG ĐỌC CHƯƠNG MẪU DOM ====================
+${chapterCleanedHtml}` : ""}
 
-Lưu ý:
-- Selector phải ngắn gọn, chính xác, tận dụng class hoặc ID đặc trưng.
-- chapterListSelector phải trỏ đúng thẻ <a> chứa liên kết chương.
-- Trả về kết quả JSON theo đúng Schema được yêu cầu.`;
+Nhiệm vụ: Hãy phân tích cấu trúc DOM trên và tìm ra 5 CSS Selectors (dành cho Cheerio/jQuery) chính xác nhất:
+1. titleSelector: Selector trích xuất Tiêu đề/Tên bộ truyện (từ Trang Chi Tiết).
+2. authorSelector: Selector trích xuất Tên tác giả (từ Trang Chi Tiết).
+3. descriptionSelector: Selector trích xuất Nội dung mô tả/Tóm tắt truyện (từ Trang Chi Tiết).
+4. chapterListSelector: Selector trích xuất các thẻ <a> liên kết đến từng chương truyện trong danh sách chương (từ Trang Chi Tiết).
+5. imageSelector: Selector trích xuất các thẻ <img> chứa ảnh trang đọc truyện (từ Trang Đọc Chương).
+
+Yêu cầu:
+- Selector ngắn gọn, tận dụng class hoặc ID đặc trưng.
+- chapterListSelector phải trỏ đúng các thẻ <a> danh sách chương.
+- Trả về JSON duy nhất theo đúng Schema được yêu cầu.`;
 
         const ai = new GoogleGenAI({ apiKey });
         const response = await ai.models.generateContent({
@@ -103,13 +139,17 @@ Lưu ý:
 
         const detectedSelectors = JSON.parse(textResult);
 
-        // Kiểm thử lại các selector AI vừa dò trên raw HTML
-        const $ = cheerio.load(rawHtml);
+        // 4. Kiểm thử lại các selector AI vừa phát hiện trên raw HTML
+        const title = detectedSelectors.titleSelector ? $story(detectedSelectors.titleSelector).first().text().trim() : "";
+        const author = detectedSelectors.authorSelector ? $story(detectedSelectors.authorSelector).first().text().trim() : "";
+        const description = detectedSelectors.descriptionSelector ? $story(detectedSelectors.descriptionSelector).first().text().trim() : "";
+        const chaptersCount = detectedSelectors.chapterListSelector ? $story(detectedSelectors.chapterListSelector).length : 0;
 
-        const title = detectedSelectors.titleSelector ? $(detectedSelectors.titleSelector).first().text().trim() : "";
-        const author = detectedSelectors.authorSelector ? $(detectedSelectors.authorSelector).first().text().trim() : "";
-        const description = detectedSelectors.descriptionSelector ? $(detectedSelectors.descriptionSelector).first().text().trim() : "";
-        const chaptersCount = detectedSelectors.chapterListSelector ? $(detectedSelectors.chapterListSelector).length : 0;
+        let imagesCount = 0;
+        if (chapterRawHtml && detectedSelectors.imageSelector) {
+            const $chap = cheerio.load(chapterRawHtml);
+            imagesCount = $chap(detectedSelectors.imageSelector).length;
+        }
 
         return {
             selectors: detectedSelectors,
@@ -117,7 +157,8 @@ Lưu ý:
                 title: title || "Không bóc tách được",
                 author: author || "Không bóc tách được",
                 description: description || "Không bóc tách được",
-                chaptersCount
+                chaptersCount,
+                imagesCount
             }
         };
     }
