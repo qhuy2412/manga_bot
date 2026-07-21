@@ -9,6 +9,7 @@ const ConfigSchema = z.object({
   CRAWL_SOURCE_NAME: z.string().default("DiLib"),
   CRAWL_SOURCE_DOMAIN: z.string().default("dilib.vn"),
   GEMINI_API_KEY: z.string().optional().default(""),
+  TIMEZONE: z.string().default("Asia/Ho_Chi_Minh"),
 });
 
 export const config = ConfigSchema.parse(process.env);

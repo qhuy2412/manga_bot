@@ -1,17 +1,20 @@
 import { Story } from "../../models";
 import { addCrawlJob } from "../queue/crawl.queue";
 import { logger } from "../utils/logger";
+import { config } from "../../config/config";
 import parser from "cron-parser";
 
 let schedulerInterval: NodeJS.Timeout | null = null;
 
 /**
- * Tính toán mốc thời gian cào tiếp theo dựa trên cấu hình cron
+ * Tính toán mốc thời gian cào tiếp theo dựa trên cấu hình cron và Múi giờ hệ thống (Asia/Ho_Chi_Minh)
  * @param cronSchedule Biểu thức cron (VD: "0 9 * * 1")
  */
 export const getNextCrawlTime = (cronSchedule: string): Date => {
     try {
-        const interval = parser.parse(cronSchedule || "0 9 * * 1");
+        const interval = parser.parse(cronSchedule || "0 9 * * 1", {
+            tz: config.TIMEZONE || "Asia/Ho_Chi_Minh"
+        });
         return interval.next().toDate();
     } catch (error) {
         // Fallback về 24h sau nếu cron schedule không hợp lệ
