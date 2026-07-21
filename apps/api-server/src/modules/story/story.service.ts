@@ -221,27 +221,40 @@ export class StoryService {
             throw new NotFoundError("Story not found!");
         }
 
-        // Đổi trạng thái sang stopping
-        story.crawlStatus.state = "stopping";
+        // 1. Đổi trạng thái sang stopping
+        story.crawlStatus = {
+            ...story.crawlStatus,
+            state: "stopping",
+            currentChapterName: "Đang dừng cào..."
+        };
         await this.storyRepo.update(id, story);
 
-        // 2. Hủy tất cả các job đang chờ cào của truyện này trong queue
-        const jobs = await crawlQueue.getJobs(["waiting", "delayed"]);
+        // 2. Hủy tất cả các job đang chờ cào của truyện này trong queue (sử dụng range 0 -> 9999 để không bị giới hạn 20 job mặc định)
+        const jobs = await crawlQueue.getJobs(["waiting", "delayed", "prioritized"], 0, 9999);
         let removedCount = 0;
         for (const job of jobs) {
-            if (job.data && job.data.storyId === id) {
-                await job.remove();
-                removedCount++;
+            if (job && job.data && job.data.storyId === id) {
+                try {
+                    await job.remove();
+                    removedCount++;
+                } catch (err) {
+                    // Bỏ qua nếu job đã được lấy ra hoặc xóa trước đó
+                }
             }
         }
 
         // 3. Đưa trạng thái về idle ngay lập tức để UI khôi phục nút Play
-        story.crawlStatus.state = "idle";
-        story.crawlStatus.currentChapterName = "Đã dừng cào";
+        story.crawlStatus = {
+            state: "idle",
+            current: story.crawlStatus.current || 0,
+            total: story.crawlStatus.total || 0,
+            currentChapterName: "Đã dừng cào",
+            jobId: ""
+        };
         await this.storyRepo.update(id, story);
 
         console.log(`[StoryService] Đã dừng cào truyện ${story.title} và gỡ ${removedCount} jobs khỏi Queue.`);
-        return { message: "Stopping request sent to workers. Queued jobs removed." };
+        return { message: `Stopping request processed. Removed ${removedCount} queued jobs.` };
     }
 
     async updateCrawlProgress(id: string, data: {

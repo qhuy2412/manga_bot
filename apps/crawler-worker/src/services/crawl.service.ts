@@ -88,6 +88,15 @@ export class CrawlerService {
             const priority = jobType === "CRON_CRAWL" ? 1 : 5;
 
             for (let index = 0; index < chaptersToQueueFiltered.length; index++) {
+                // Kiểm tra định kỳ xem Admin có bấm dừng cào không
+                if (index > 0 && index % 10 === 0) {
+                    const currentStory = await this.fetchStoryDetails(storyId);
+                    if (currentStory.crawlStatus && currentStory.crawlStatus.state === "stopping") {
+                        console.log(`[CrawlerService] Nhận lệnh dừng cào từ Admin khi đang xếp lịch. Hủy đẩy job.`);
+                        break;
+                    }
+                }
+
                 const chapter = chaptersToQueueFiltered[index];
 
                 // Đẩy job con cào chương này vào Queue
