@@ -1,10 +1,29 @@
 import React from "react";
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getStoryBySlug, getChaptersByStoryId, getChapterDetail } from "@/lib/api";
 import ChapterReaderClient from "@/components/ChapterReaderClient";
 
 interface PageProps {
     params: Promise<{ slug: string; index: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const { slug, index } = await params;
+    const chapterIndex = parseInt(index, 10);
+    try {
+        const story = await getStoryBySlug(slug);
+        if (story) {
+            const chapName = `Chương ${chapterIndex + 1}`;
+            return {
+                title: `${story.title} - ${chapName}`,
+                description: `Đọc truyện ${story.title} ${chapName} chất lượng cao tại MangaBot.`
+            };
+        }
+    } catch {
+        // Fallback
+    }
+    return { title: "Đọc chương" };
 }
 
 export default async function ChapterPage({ params }: PageProps) {

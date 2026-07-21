@@ -1,4 +1,5 @@
 import React from "react";
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStoryBySlug, getChaptersByStoryId, getGenres } from "@/lib/api";
@@ -6,6 +7,22 @@ import { Eye, BookOpen, User, BookMarked, List, Calendar, ArrowLeft } from "luci
 
 interface PageProps {
     params: Promise<{ slug: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+    const { slug } = await params;
+    try {
+        const story = await getStoryBySlug(slug);
+        if (story) {
+            return {
+                title: story.title,
+                description: story.description ? story.description.substring(0, 160) : `Đọc truyện ${story.title} chất lượng cao tại MangaBot.`
+            };
+        }
+    } catch {
+        // Fallback
+    }
+    return { title: "Thông tin truyện" };
 }
 
 export default async function StoryDetailPage({ params }: PageProps) {

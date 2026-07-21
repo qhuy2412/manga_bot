@@ -6,6 +6,7 @@ import axios from "axios";
 import * as cheerio from "cheerio";
 import crypto from 'crypto';
 import { crawlQueue } from "../../shared/queue/crawl.queue";
+import { getNextCrawlTime } from "../../shared/scheduler/crawl.scheduler";
 
 export class StoryService {
     constructor(private storyRepo: StoryRepository) { }
@@ -80,6 +81,9 @@ export class StoryService {
             finalSlug = `${finalSlug}-${Date.now().toString().substring(8)}`;
         }
 
+        // Tính toán mốc thời gian cào tự động kế tiếp dựa trên cronSchedule
+        const nextCrawlTime = getNextCrawlTime(data.cronSchedule || "0 9 * * 1");
+
         // 5. Kết hợp toàn bộ dữ liệu để lưu vào Repository
         const storyPayload = {
             ...data,
@@ -89,7 +93,8 @@ export class StoryService {
             description,
             coverImage,
             lastChapterUrl: "",
-            latestChapterHash: ""
+            latestChapterHash: "",
+            nextCrawlTime
         };
 
         return await this.storyRepo.create(storyPayload as any);
@@ -106,7 +111,13 @@ export class StoryService {
                 throw new BadRequestError("Story slug already exists!");
             }
         }
-        return await this.storyRepo.update(id, data);
+
+        const updateData: any = { ...data };
+        if (data.cronSchedule) {
+            updateData.nextCrawlTime = getNextCrawlTime(data.cronSchedule);
+        }
+
+        return await this.storyRepo.update(id, updateData);
     }
 
     async deleteStory(id: string) {

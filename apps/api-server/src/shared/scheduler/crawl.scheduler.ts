@@ -32,7 +32,7 @@ export const checkAndEnqueueStories = async (): Promise<void> => {
         // - nextCrawlTime <= now
         const storiesToCrawl = await Story.find({
             isAutoUpdate: true,
-            nextCrawlTime: { $lte: now }
+            nextCrawlTime: { $exists: true, $ne: null, $lte: now }
         });
 
         if (storiesToCrawl.length === 0) {

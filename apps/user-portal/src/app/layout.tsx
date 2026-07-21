@@ -15,7 +15,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MangaBot - Đọc Truyện Tranh Online Chất Lượng Cao",
+  title: {
+    default: "MangaBot - Đọc Truyện Tranh Online Chất Lượng Cao",
+    template: "%s | MangaBot"
+  },
   description: "Hệ thống cập nhật và cào truyện tranh tự động. Đọc truyện chất lượng cao, nén WebP tốc độ cực nhanh, không quảng cáo.",
 };
 
