@@ -48,3 +48,14 @@ export const getGenres = async () => {
     const res = await api.get("/genres");
     return res.data.data;
 };
+
+/**
+ * Increment view count for a story
+ */
+export const incrementStoryViews = async (storyId: string) => {
+    try {
+        await api.post(`/stories/${storyId}/views`);
+    } catch {
+        // Ignore view error silently
+    }
+};

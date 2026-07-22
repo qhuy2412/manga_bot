@@ -4,6 +4,7 @@ import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, BookOpen, ArrowUp } from "lucide-react";
+import { incrementStoryViews } from "@/lib/api";
 
 interface Chapter {
     _id: string;
@@ -12,6 +13,7 @@ interface Chapter {
 }
 
 interface ChapterReaderClientProps {
+    storyId?: string;
     storySlug: string;
     storyTitle: string;
     chapters: Chapter[];
@@ -23,6 +25,7 @@ interface ChapterReaderClientProps {
 }
 
 export default function ChapterReaderClient({
+    storyId,
     storySlug,
     storyTitle,
     chapters,
@@ -34,6 +37,13 @@ export default function ChapterReaderClient({
     const currentIndex = currentChapter.chapterIndex;
     const prevChapter = sortedChapters.find(c => c.chapterIndex === currentIndex - 1);
     const nextChapter = sortedChapters.find(c => c.chapterIndex === currentIndex + 1);
+
+    // Tự động tăng lượt xem 1 lần duy nhất khi client load chương này
+    useEffect(() => {
+        if (storyId) {
+            incrementStoryViews(storyId);
+        }
+    }, [storyId, currentChapter.chapterIndex]);
 
     // Keyboard navigation (ArrowLeft for Prev, ArrowRight for Next)
     useEffect(() => {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getStoryBySlug, getChaptersByStoryId, getGenres } from "@/lib/api";
 import { Eye, BookOpen, User, BookMarked, List, Calendar, ArrowLeft } from "lucide-react";
+import ViewTracker from "@/components/ViewTracker";
 
 interface PageProps {
     params: Promise<{ slug: string }>;
@@ -55,6 +56,7 @@ export default async function StoryDetailPage({ params }: PageProps) {
 
     return (
         <div className="min-h-screen pb-16">
+            <ViewTracker storyId={story._id} />
             {/* 1. Backdrop Blurry Banner */}
             <div className="relative h-64 sm:h-96 w-full overflow-hidden bg-gray-950">
                 <div 

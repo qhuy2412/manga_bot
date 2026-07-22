@@ -83,6 +83,18 @@ export class StoryController {
         }
     }
 
+    async incrementViews(req: Request, res: Response, next: NextFunction) {
+        try {
+            const storyId = req.params.id as string;
+            await this.storyService.incrementViews(storyId);
+            res.status(200).json({
+                data: { message: "Views incremented successfully" }
+            });
+        } catch (error: any) {
+            next(error);
+        }
+    }
+
     async findAll(req: Request, res: Response, next: NextFunction) {
         try {
             const stories = await this.storyService.findAll();

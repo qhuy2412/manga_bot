@@ -142,12 +142,11 @@ export class StoryService {
         if (!story) {
             throw new NotFoundError("Story not found!");
         }
-        // Tăng lượt xem atomically trong DB
-        await this.storyRepo.incrementViews(story._id.toString());
-        
-        // Cập nhật giá trị local field để trả về client đồng bộ
-        story.views = (story.views || 0) + 1;
         return story;
+    }
+
+    async incrementViews(id: string) {
+        return await this.storyRepo.incrementViews(id);
     }
 
     async findAll() {

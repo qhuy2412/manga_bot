@@ -13,5 +13,6 @@ const controller = new StoryController(service);
 router.get("/", (req, res, next) => controller.findAll(req, res, next));
 router.get("/slug/:slug", (req, res, next) => controller.findBySlug(req, res, next));
 router.get("/:id", (req, res, next) => controller.findById(req, res, next));
+router.post("/:id/views", (req, res, next) => controller.incrementViews(req, res, next));
 
 export default router;

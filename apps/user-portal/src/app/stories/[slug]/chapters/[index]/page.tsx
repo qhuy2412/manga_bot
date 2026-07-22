@@ -58,6 +58,7 @@ export default async function ChapterPage({ params }: PageProps) {
 
     return (
         <ChapterReaderClient
+            storyId={story._id}
             storySlug={slug}
             storyTitle={story.title}
             chapters={chapters}
