@@ -78,11 +78,12 @@ export class CrawlerService {
             }
 
             // Cập nhật tổng số chương cần cào trong DB để làm tổng tiến độ
+            const totalToQueue = chaptersToQueueFiltered.length;
             await this.updateCrawlProgress(storyId, {
-                state: "crawling",
-                total: chaptersToQueueFiltered.length,
+                state: totalToQueue > 0 ? "crawling" : "idle",
+                total: totalToQueue,
                 current: 0,
-                currentChapterName: "Đang xếp lịch cào..."
+                currentChapterName: totalToQueue > 0 ? "Đang xếp lịch cào..." : "Không có chương mới"
             });
 
             const priority = jobType === "CRON_CRAWL" ? 1 : 5;
@@ -241,6 +242,9 @@ export class CrawlerService {
         } catch (err: any) {
             console.error(`[CrawlerService] Lỗi nghiêm trọng khi cào chương ${chapterName}:`, err.message);
             const executionTimeMs = Date.now() - startTime;
+
+            // Tăng tiến độ cào kể cả khi gặp lỗi nghiêm trọng để tránh kẹt trạng thái "crawling"
+            await this.incrementCrawlProgress(storyId, `Lỗi cào ${chapterName}`);
 
             await this.saveCrawlLog({
                 storyId,
