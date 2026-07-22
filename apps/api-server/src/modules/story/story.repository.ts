@@ -30,5 +30,7 @@ export class StoryRepository {
     async find(query: any) {
         return await this.storyModel.find(query);
     }
-
+    async incrementViews(id: string) {
+        return await this.storyModel.findByIdAndUpdate(id, { $inc: { views: 1 } }, { new: true });
+    }
 }
